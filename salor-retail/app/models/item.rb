@@ -352,7 +352,7 @@ class Item < ActiveRecord::Base
     self.sku = self.sku.upcase
     invld = false
     if self.vendor_id.nil? then
-      self.vendor_id = $Vendor.id
+      self.vendor_id = $User.vendor.id
       invld = true
     end
     if self.name.blank? then
@@ -378,8 +378,8 @@ class Item < ActiveRecord::Base
     end
     if not self.tax_profile then
       # puts "Setting Default TaxProfile"
-      if GlobalData.tax_profiles
-        tp = GlobalData.tax_profiles.find {|t| t if t.default == 1}
+      if TaxProfile.first
+        tp = TaxProfile.scopied($User).find {|t| t if t.default == 1}
         if tp then
           self.tax_profile_id = tp.id
         else
@@ -388,12 +388,9 @@ class Item < ActiveRecord::Base
       end
       invld = true
     end
-    if invld then
-      save(:validate => false)
-    end
   end
   def validify
-    @item = Item.all_seeing.find_by_sku(self.sku)
+    @item = Item.by_vendor(self.vendor).find_by_sku(self.sku)
     if not @item.nil? and not self.id == @item.id then
       errors.add(:sku, I18n.t('system.errors.sku_must_be_unique',:sku => self.sku))
       GlobalErrors.append_fatal('system.errors.sku_must_be_unique',self,{:sku => self.sku});

@@ -226,7 +226,7 @@ class Order < ActiveRecord::Base
 	    oi = OrderItem.new(:employee => self.employee) # MF: doesn't make sense? I know right...but it fixed something so just leave it for now.
 	  end
 	  oi.order_id = self.id
-    oi.vendor_id = self.vendor_id
+    oi.vendor = self.vendor
 	  oi.no_inc = true if $Params and $Params[:no_inc]
 	  ret = oi.set_item(item)
 	  return oi if not ret

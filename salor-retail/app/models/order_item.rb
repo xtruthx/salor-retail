@@ -17,6 +17,7 @@ class OrderItem < ActiveRecord::Base
   belongs_to :item_type
   belongs_to :category
   belongs_to :employee
+  belongs_to :vendor
   has_and_belongs_to_many :discounts
   attr_accessor :is_valid
   has_many :coupons, :class_name => 'OrderItem', :foreign_key => :coupon_id
@@ -86,15 +87,15 @@ class OrderItem < ActiveRecord::Base
     dt = DrawerTransaction.new(opts)
     dt[type] = true
     dt.amount = amount
-    dt.drawer_id = GlobalData.salor_user.get_drawer.id
-    dt.drawer_amount = GlobalData.salor_user.get_drawer.amount
+    dt.drawer_id = $User.get_drawer.id
+    dt.drawer_amount = $User.get_drawer.amount
     dt.order_id = self.order.id
     dt.order_item_id = self.id
     if dt.save then
       if type == :payout then
-        GlobalData.salor_user.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount - dt.amount)
+        $User.get_drawer.update_attribute(:amount,$User.get_drawer.amount - dt.amount)
       elsif type == :drop then
-        GlobalData.salor_user.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount + dt.amount)
+        $User.get_drawer.update_attribute(:amount,$User.get_drawer.amount + dt.amount)
       end
     else
       raise dt.errors.full_messages.inspect

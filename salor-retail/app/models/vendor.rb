@@ -32,6 +32,7 @@ class Vendor < ActiveRecord::Base
   has_many :tax_profiles
   has_many :shipment_types
   has_many :invoice_blurbs
+  has_many :order_items
   serialize :unused_order_numbers
 	
   
