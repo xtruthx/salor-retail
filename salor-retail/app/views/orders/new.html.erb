@@ -144,7 +144,7 @@ function addPosItem(item) {
   item['coupon_amount'] = item['coupon_amount'] + item['discount_amount'];
   $('.pos-table-left-column-items').prepend(row);
     _set('item',item,row);
-  <% if GlobalData.cash_register.hide_discounts == true then  %>
+  <% if @current_register.hide_discounts == true then  %>
     var attrs = ['name','quantity','price','total'];
   <% else  %>
     var attrs = ['name','quantity','price','coupon_amount','rebate','total','tax_profile_amount'];
@@ -192,7 +192,7 @@ function addPosItem(item) {
       }
       col.attr('field',attr);
       if (attr == "price" || attr == "rebate" || attr == "name" || attr == "tax_profile_amount") {
-        <% if $User.can(:change_prices) %>
+        <% if @current_employee.can(:change_prices) %>
           make_in_place_edit(col);
           col.addClass('editme pointer no-select');
         <% end %>
@@ -370,8 +370,8 @@ $(function () {
     function weigh_last_item() {
     try {
       var itemid = $(".pos-table-left-column-items").children(":first").attr('model_id');
-      <% if not @cash_register.scale.blank? then  %>
-        var weight = Salor.<%= @cash_register.scale %>;
+      <% if not @current_register.scale.blank? then  %>
+        var weight = Salor.<%= @current_register.scale %>;
       <% else %>
         var weight = 0;
       <% end %>
@@ -387,7 +387,7 @@ $(function () {
      }
     }
   </script>
-<% if not @cash_register.scale.blank? then  %>
+<% if not @current_register.scale.blank? then  %>
   
   <div class="uniscalebutton" align="center" onmousedown="weigh_last_item();">
     <%= raw salor_icon(:weight,{:class => "no-select",:style => "cursor:pointer;"},32) %>
@@ -405,7 +405,7 @@ $(function () {
 
 
 <div class='center'>
-<% if $User.can(:change_prices) %>
+<% if @current_employee.can(:change_prices) %>
   <div class="pos-order-total" data_type="float" id="pos_order_total" model_id="<%= @order.id %>" klass="Order" field="total"></div>
 <% else %>
   <div class="pos-order-total" data_type="float" id="pos_order_total" model_id="<%= @order.id %>" klass="Order" field="total"></div>

@@ -9,18 +9,18 @@
   </li>
   <li>
     <div align="center" id="btn-vendors-index" class="">
-      <a href="<%= vendor_path($Vendor) %>">
+      <a href="<%= vendor_path(@current_vendor) %>">
         <img src="/images/icons/<%= icon(:vendor,32) %>" /><br /><span class='icon-caption'><%= I18n.t("menu.home") %></span>
       </a>
     </div>
   </li>
-  <% if $User and $User.can(:index_items) %>
+  <% if @current_employee and @current_employee.can(:index_items) %>
   <li>
     <div align="center" id="btn-items-index" class="">
-      <%=  link_to raw(salor_icon(:item,{},32,I18n.t("activerecord.models.item.other"))), items_path(:vendor_id => $User.meta.vendor_id) %>
+      <%=  link_to raw(salor_icon(:item,{},32,I18n.t("activerecord.models.item.other"))), items_path(:vendor_id => @current_employee.meta.vendor_id) %>
     </div>
   </li>
-  <% if $User and $User.can(:cashier) %>
+  <% if @current_employee and @current_employee.can(:cashier) %>
     <li>
       <div align="center" class="no-touchy cash-drop-header" onmousedown="show_cash_drop();">
         <div id='header_drawer_amount'></div>
@@ -28,17 +28,17 @@
       </div>
     </li>
   <% end %>
-  <% if $User and $User.can(:index_orders) %>
+  <% if @current_employee and @current_employee.can(:index_orders) %>
   <li>
     <div align="center" id="btn-orders-new" class="">
       <%= link_to salor_icon(:order,{},32), "/orders/new" %><br /><span class='icon-caption'><%= I18n.t("menu.pos") %></span>
     </div>
   </li>
   <% end %>
-  <% if $User and $User.can(:index_customers) %>
+  <% if @current_employee and @current_employee.can(:index_customers) %>
   <li>
     <div align="center" id="btn-customers-new" class="">
-      <%= link_to salor_icon(:customer,{},32,I18n.t("menu.customer")), customers_path(:vendor_id => $User.meta.vendor_id) %><br />
+      <%= link_to salor_icon(:customer,{},32,I18n.t("menu.customer")), customers_path(:vendor_id => @current_employee.meta.vendor_id) %><br />
     </div>
   </li>
   <% end %>
@@ -56,7 +56,7 @@
     </div>
   </li>
   </ul>
-  <% if $User and not curl("orders#new") then  %>
+  <% if @current_employee and not curl("orders#new") then  %>
     <%= salor_render :partial => "shared/generic_search" %>
   <% end %>
 </div>

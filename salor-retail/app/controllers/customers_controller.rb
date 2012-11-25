@@ -15,7 +15,7 @@ class CustomersController < ApplicationController
   # GET /customers
   # GET /customers.xml
   def index
-    @customers = Customer.scopied.page(GlobalData.params.page).per(GlobalData.conf.pagination)
+    @customers = Customer.scopied(@current_employee).page(params[:page]).per(25)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -35,7 +35,7 @@ class CustomersController < ApplicationController
   end
 
   def show
-    @customer = Customer.scopied.find_by_id(params[:id])
+    @customer = Customer.scopied(@current_employee).find_by_id(params[:id])
     @item_statistics = @customer.get_item_statistics
     @last_orders = @customer.orders.limit(5).reverse
   end
@@ -55,7 +55,7 @@ class CustomersController < ApplicationController
     
     @customer = Customer.new(params[:customer])
     @loyalty_card = LoyaltyCard.new(params[:loyalty_card])
-    @loyalty_card.vendor_id = $Vendor.id
+    @loyalty_card.vendor_id = @current_vendor.id
     respond_to do |format|
       if @loyalty_card.save and @customer.save
         @loyalty_card.update_attribute(:customer_id,@customer.id)

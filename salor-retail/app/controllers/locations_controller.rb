@@ -14,7 +14,7 @@ class LocationsController < ApplicationController
   # GET /locations
   # GET /locations.xml
   def index
-    @locations = salor_user.get_locations(params[:page])
+    @locations = Location.scopied(@current_employee).page(params[:page])
 
     respond_to do |format|
       format.html # index.html.erb
@@ -25,7 +25,7 @@ class LocationsController < ApplicationController
   # GET /locations/1
   # GET /locations/1.xml
   def show
-    @location = Location.by_vendor.find_by_id(params[:id])
+    @location = Location.by_vendor(@current_vendor).find_by_id(params[:id])
 
     add_breadcrumb @location.name,'location_path(@location,:vendor_id => params[:vendor_id], :type => params[:type])'
     respond_to do |format|
@@ -46,7 +46,7 @@ class LocationsController < ApplicationController
 
   # GET /locations/1/edit
   def edit
-    @location = salor_user.get_location(params[:id])
+    @location = Location.by_vendor(@current_vendor).find_by_id(params[:id])
     
     add_breadcrumb @location.name,'edit_location_path(@location,:vendor_id => params[:vendor_id], :type => params[:type])'
   end
@@ -71,7 +71,7 @@ class LocationsController < ApplicationController
   # PUT /locations/1
   # PUT /locations/1.xml
   def update
-    @location = salor_user.get_location(params[:id])
+    @location = Location.by_vendor(@current_vendor).find_by_id(params[:id])
 
     respond_to do |format|
       if @location.update_attributes(params[:location])
@@ -88,7 +88,7 @@ class LocationsController < ApplicationController
   # DELETE /locations/1
   # DELETE /locations/1.xml
   def destroy
-    @location = $User.get_location(params[:id])
+    @location = Location.by_vendor(@current_vendor).find_by_id(params[:id])
     @location.kill
     GlobalData.reload(:locations)
     respond_to do |format|
@@ -98,8 +98,7 @@ class LocationsController < ApplicationController
   end
   private 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.locations"),'locations_path(:vendor_id => params[:vendor_id], :type => params[:type])'
   end
 end

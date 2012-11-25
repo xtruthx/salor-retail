@@ -30,11 +30,11 @@
 
   %body#body
     .background
-      = render :partial => "shared/header_menu" if $User and $User.can(:see_header) 
+      = render :partial => "shared/header_menu" if @current_employee and @current_employee.can(:see_header) 
       = render :partial => "shared/notice"
       .errors.hidden
       .help.hidden
-      = salor_render :partial => "shared/cash_drop"
+      = salor_render :partial => "shared/cash_drop" if @current_employee
       
       = yield
       .close-window{ :onclick => "if (typeof Salor != 'undefined') { Salor.shutdown();} else { self.close();}" } X

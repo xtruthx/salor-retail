@@ -12,7 +12,7 @@ class TenderMethodsController < ApplicationController
   # GET /tender_methods
   # GET /tender_methods.xml
   def index
-    @tender_methods = TenderMethod.scopied.all
+    @tender_methods = TenderMethod.scopied(@current_employee).all
 
     respond_to do |format|
       format.html # index.html.erb
@@ -23,7 +23,7 @@ class TenderMethodsController < ApplicationController
   # GET /tender_methods/1
   # GET /tender_methods/1.xml
   def show
-    @tender_method = TenderMethod.scopied.find(params[:id])
+    @tender_method = TenderMethod.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -44,7 +44,7 @@ class TenderMethodsController < ApplicationController
 
   # GET /tender_methods/1/edit
   def edit
-    @tender_method = TenderMethod.scopied.find(params[:id])
+    @tender_method = TenderMethod.scopied(@current_employee).find(params[:id])
   end
 
   # POST /tender_methods
@@ -66,7 +66,7 @@ class TenderMethodsController < ApplicationController
   # PUT /tender_methods/1
   # PUT /tender_methods/1.xml
   def update
-    @tender_method = TenderMethod.scopied.find(params[:id])
+    @tender_method = TenderMethod.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       if @tender_method.update_attributes(params[:tender_method])
@@ -82,7 +82,7 @@ class TenderMethodsController < ApplicationController
   # DELETE /tender_methods/1
   # DELETE /tender_methods/1.xml
   def destroy
-    @tender_method = TenderMethod.scopied.find(params[:id])
+    @tender_method = TenderMethod.scopied(@current_employee).find(params[:id])
     @tender_method.kill
 
     respond_to do |format|
@@ -92,8 +92,7 @@ class TenderMethodsController < ApplicationController
   end
   private
   def crumble
-    @vendor = GlobalData.salor_user.get_vendor(GlobalData.salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.tender_methods"),'tender_methods_path(:vendor_id => params[:vendor_id])'
   end
 end

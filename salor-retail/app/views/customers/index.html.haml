@@ -1,0 +1,21 @@
+= raw content_box_top(t("views.customers"))
+%table{ :align=>'center'}
+  %tr
+    %td
+      %div{:class=>'tool-icon'}
+        = link_to(image_tag("/images/icons/" + icon(:add,32)), new_customer_path)
+        %br
+        %span= I18n.t('menu.new_customer')
+%table{:class => 'stripe-me',:width=>'90%',:align=>"center"}
+  - @customers.each do |customer|
+    %tr
+      %td= customer.full_name
+      %td
+        %div{:onmousedown=>"window.location = '#{edit_customer_path(customer)}';"}
+          = link_to(image_tag('/images/icons/' + icon(:edit,32)), edit_customer_path(customer))
+      %td
+        = link_to(image_tag('/images/icons/' + icon(:delete,32)), customer, :confirm => 'Are you sure?', :method => :delete)
+%table{:align=>"center",:width=>"90%"}
+  %tr
+    %td
+      %div{:class=>"pagination", :align=>"center"}=paginate @customers if @customers

@@ -12,7 +12,7 @@ class ActionsController < ApplicationController
   # GET /actions
   # GET /actions.xml
   def index
-    @actions = Action.scopied.order("id desc").page(params[:page]).per(25)
+    @actions = Action.scopied(@current_employee).order("id desc").page(params[:page]).per(25)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -23,7 +23,7 @@ class ActionsController < ApplicationController
   # GET /actions/1
   # GET /actions/1.xml
   def show
-    @action = Action.scopied.find_by_id(params[:id])
+    @action = Action.scopied(@current_employee).find_by_id(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -44,7 +44,7 @@ class ActionsController < ApplicationController
 
   # GET /actions/1/edit
   def edit
-    @action = Action.scopied.find_by_id(params[:id])
+    @action = Action.scopied(@current_employee).find_by_id(params[:id])
   end
 
   # POST /actions
@@ -71,7 +71,7 @@ class ActionsController < ApplicationController
   # PUT /actions/1
   # PUT /actions/1.xml
   def update
-    @action = Action.scopied.find(params[:id])
+    @action = Action.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       if @action.update_attributes(params[:item])
@@ -87,7 +87,7 @@ class ActionsController < ApplicationController
   # DELETE /actions/1
   # DELETE /actions/1.xml
   def destroy
-    @action = Action.scopied.find(params[:id])
+    @action = Action.scopied(@current_employee).find(params[:id])
     @action.destroy
 
     respond_to do |format|
@@ -97,8 +97,7 @@ class ActionsController < ApplicationController
   end
   private
   def crumble
-    @vendor = GlobalData.salor_user.get_vendor(GlobalData.salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.actions"),'actions_path(:vendor_id => params[:vendor_id])'
   end
 end

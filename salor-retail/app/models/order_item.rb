@@ -16,6 +16,7 @@ class OrderItem < ActiveRecord::Base
   belongs_to :tax_profile
   belongs_to :item_type
   belongs_to :category
+  belongs_to :employee
   has_and_belongs_to_many :discounts
   attr_accessor :is_valid
   has_many :coupons, :class_name => 'OrderItem', :foreign_key => :coupon_id
@@ -54,8 +55,8 @@ class OrderItem < ActiveRecord::Base
   # To speed things up, we cache the discounts
   def self.reload_discounts
   end
-  def OrderItem.get_discounts
-    Discount.scopied.select("name,amount,item_sku,id,location_id,category_id,applies_to,amount_type").where(["start_date <= ? and end_date >= ?",Time.now,Time.now])
+  def OrderItem.get_discounts(emp)
+    Discount.scopied(emp).select("name,amount,item_sku,id,location_id,category_id,applies_to,amount_type").where(["start_date <= ? and end_date >= ?",Time.now,Time.now])
   end
   def toggle_buyback(x)
     #puts "Order.buy_order #{self.order.buy_order}"
@@ -499,7 +500,7 @@ class OrderItem < ActiveRecord::Base
     return self.tax if self.tax_is_locked
     return 0 if not self.tax_profile_amount
     p = self.total
-    if $Conf and not $Conf.calculate_tax then
+    if self.vendor.salor_configuration and not self.vendor.salor_configuration.calculate_tax then
       net_price = (p *(100 / (100 + (100 * (self.tax_profile_amount/100))))).round(2);
       t = (p - net_price).round(2)
     else
@@ -574,7 +575,6 @@ class OrderItem < ActiveRecord::Base
 
   #
   def discover_price(item)
-    puts "&&& In Discover price"
     if self.order and self.order.buy_order or self.is_buyback then
       return item.buyback_price if self.order.buy_order
       return (item.buyback_price * -1)
@@ -598,8 +598,8 @@ class OrderItem < ActiveRecord::Base
       p = item.base_price
     end
     pstart = p
-    if not self.is_buyback and not OrderItem.get_discounts.nil? then
-      OrderItem.get_discounts.each do |discount|
+    if not self.is_buyback then
+      OrderItem.get_discounts(self.employee).each do |discount|
 #         puts "Evaling discount: " + discount.inspect
         if not (discount.item_sku == item.sku and discount.applies_to == 'Item') and
             not (discount.location_id == item.location_id and discount.applies_to == 'Location') and

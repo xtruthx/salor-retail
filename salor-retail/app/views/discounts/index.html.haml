@@ -1,0 +1,32 @@
+= raw content_box_top(I18n.t("headings.discounts_for", :store => @current_vendor.name))
+%table{:align=>"center"}
+  %tr
+    %td
+      %div{:class => "tool-icon"}
+        = link_to salor_icon(:add,{},32),new_discount_path(:vendor_id => @current_vendor.id)
+        %br
+        %span= I18n.t('menu.new_discount')
+%table{:width=>"90%",:align=>"center",:class=>"stripe-me"}
+  %tr
+    - [:name,:start_date,:end_date,:applies_to,'',:amount_type,'',''].each do |h|
+      - if not h.empty?
+        %th= I18n.t("activerecord.attributes.#{h}").upcase
+      - else
+        %th= raw '&nbsp;'
+  - @discounts.each do |discount|
+    %tr
+      %td{:width=>"20%"}= discount.name[0...35]
+      %td{:align=>"center"}= l discount.start_date, :format => :salor
+      %td{:align=>"center"}= l discount.end_date, :format => :salor
+      - if discount.applies_to == 'Vendor' and discount.vendor
+        %td{:align=>"center"}= link_to(discount.vendor.name,"/vendors/#{discount.vendor_id}/edit") 
+      - if discount.applies_to == 'Category' and discount.category
+        %td{:align=>"center"}= link_to(discount.category.name,"/categories/#{discount.category_id}") 
+      - if discount.applies_to == 'Location' and discount.location
+        %td{:align=>"center"}= link_to(discount.location.name,"/locations/#{discount.location_id}") 
+      - if discount.applies_to == 'Item'
+        %td{:align=>"center"}= link_to(discount.item_sku,"/items/#{discount.item.id}/edit") 
+      %td{:align=>"center"}= discount.types_display
+      %td{:align=>"center"}= discount.amount_type == 'fixed' ? number_to_currency(discount.amount) : number_to_percentage(discount.amount)
+      %td{:align=>"center"}= link_to salor_icon(:edit,{},16), edit_discount_path(discount)
+      %td{:align=>"center"}= link_to salor_icon(:delete,{},16), discount, :confirm => 'Are you sure?', :method => :delete

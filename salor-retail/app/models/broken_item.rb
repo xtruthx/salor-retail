@@ -29,8 +29,8 @@ class BrokenItem < ActiveRecord::Base
   
   def item
     if self.is_shipment_item then
-      return ShipmentItem.scopied.find_by_sku(self.sku)
+      return ShipmentItem.find_by_sku(self.sku)
     end
-    return Item.scopied.find_by_sku(self.sku)
+    return Item.find_by_sku(self.sku)
   end
 end

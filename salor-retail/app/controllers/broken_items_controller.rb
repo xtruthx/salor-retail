@@ -12,7 +12,7 @@ class BrokenItemsController < ApplicationController
   # GET /broken_items
   # GET /broken_items.xml
   def index
-    @broken_items = BrokenItem.scopied.page(params[:page]).per(25)
+    @broken_items = BrokenItem.scopied(@current_employee).page(params[:page]).per(25)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -23,7 +23,7 @@ class BrokenItemsController < ApplicationController
   # GET /broken_items/1
   # GET /broken_items/1.xml
   def show
-    @broken_item = BrokenItem.scopied.find(params[:id])
+    @broken_item = BrokenItem.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -68,7 +68,7 @@ class BrokenItemsController < ApplicationController
   # PUT /broken_items/1
   # PUT /broken_items/1.xml
   def update
-    @broken_item = BrokenItem.scopied.find(params[:id])
+    @broken_item = BrokenItem.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       if @broken_item.update_attributes(params[:broken_item])
@@ -84,7 +84,7 @@ class BrokenItemsController < ApplicationController
   # DELETE /broken_items/1
   # DELETE /broken_items/1.xml
   def destroy
-    @broken_item = BrokenItem.scopied.find(params[:id])
+    @broken_item = BrokenItem.scopied(@current_employee).find(params[:id])
     @broken_item.destroy
 
     respond_to do |format|
@@ -94,8 +94,7 @@ class BrokenItemsController < ApplicationController
   end
   private 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.broken_items"),'broken_items_path(:vendor_id => params[:vendor_id])'
   end
 end

@@ -11,11 +11,11 @@ class ButtonsController < ApplicationController
   before_filter :crumble
   
   def index
-    @button_categories = Category.where(:button_category => true).order(:position)
+    @button_categories = Category.by_vendor(@current_vendor).where(:button_category => true).order(:position)
   end
   #
   def show
-    @button = Button.scopied.find(params[:id])
+    @button = Button.scopied(@current_employee).find(params[:id])
   end
 
   def new
@@ -24,7 +24,7 @@ class ButtonsController < ApplicationController
   end
 
   def edit
-    @button = Button.scopied.find_by_id(params[:id])
+    @button = Button.scopied(@current_employee).find_by_id(params[:id])
     @button_categories = Category.where(:button_category => true).order(:position)
   end
 
@@ -43,14 +43,14 @@ class ButtonsController < ApplicationController
   end
 
   def update
-    @button = Button.scopied.find_by_id(params[:id])
+    @button = Button.scopied(@current_employee).find_by_id(params[:id])
 
     @button.update_attributes params[:button]
     redirect_to buttons_path
   end
 
   def destroy
-    @button = Button.scopied.find_by_id(params[:id])
+    @button = Button.scopied(@current_employee).find_by_id(params[:id])
   @button.kill if @button
 
     respond_to do |format|
@@ -60,7 +60,7 @@ class ButtonsController < ApplicationController
   end
   #
   def position
-    @buttons = Button.scopied.where("id IN (#{params[:button].join(',')})")
+    @buttons = Button.scopied(@current_employee).where("id IN (#{params[:button].join(',')})")
     Button.sort(@buttons,params[:button])
     render :nothing => true
   end
@@ -68,8 +68,7 @@ class ButtonsController < ApplicationController
   private 
 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.buttons"),'buttons_path(:vendor_id => params[:vendor_id])'
   end
 end

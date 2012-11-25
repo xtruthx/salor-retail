@@ -303,8 +303,8 @@ module ApplicationHelper
     tarr = tm.split(' ')
     ret = ''
     reg = nil
-    reg = CashRegister.find_by_id($User.meta.cash_register_id) if $User
-    ret << "<span>#{tarr[3]}</span><br />#{tarr[0]} #{tarr[1]} #{tarr[2]}<br />#{$User.username if $User}<br />#{ reg.name if reg }"
+    reg = CashRegister.find_by_id(@current_employee.meta.cash_register_id) if @current_employee
+    ret << "<span>#{tarr[3]}</span><br />#{tarr[0]} #{tarr[1]} #{tarr[2]}<br />#{@current_employee.username if @current_employee}<br />#{ reg.name if reg }"
     return ret.html_safe
   end
   def num2name(num)

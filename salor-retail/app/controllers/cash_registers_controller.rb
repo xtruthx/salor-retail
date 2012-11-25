@@ -12,7 +12,7 @@ class CashRegistersController < ApplicationController
   # GET /cash_registers
   # GET /cash_registers.xml
   def index
-    @cash_registers = CashRegister.scopied.all
+    @cash_registers = CashRegister.scopied(@current_employee).limit(256)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -105,8 +105,7 @@ class CashRegistersController < ApplicationController
   end
   private 
   def crumble
-    @vendor = $Vendor
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)' if @vendor.id
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)' if @current_vendor.id
     add_breadcrumb I18n.t("menu.cash_registers"),'cash_registers_path(:vendor_id => params[:vendor_id])'
   end
 end

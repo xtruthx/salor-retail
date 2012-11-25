@@ -20,8 +20,8 @@ class EmployeesController < ApplicationController
       session[:user_type] = user.class.to_s
       redirect_to vendors_path and return
     elsif check then
-      user = Employee.login(params[:code]) 
-      user = User.login(params[:code]) if not user
+      user = Employee.first #Employee.login(params[:code]) 
+      user ||= User.login(params[:code])
     else
       redirect_to :controller => :home, :action => :index, :notice => "Check failed" and return
     end
@@ -40,7 +40,8 @@ class EmployeesController < ApplicationController
       end
       session[:user_id] = user.id
       session[:user_type] = user.class.to_s
-      $User = user
+      @current_employee = user
+      @current_vendor = user.vendor
       # History.record("employee_sign_in",user,5) # disabled this because it would break databse replication as soon as one logs into the mirror machine
       if cr = CashRegister.find_by_ip(request.ip) then
         user.get_meta.update_attribute :cash_register_id, cr.id
@@ -65,7 +66,7 @@ class EmployeesController < ApplicationController
   # GET /employees
   # GET /employees.xml
   def index
-    @employees = salor_user.get_employees(salor_user.meta.vendor_id,params[:page])
+    @employees = @current_vendor.employees.visible.page(params[:page]).limit(25)
     
     respond_to do |format|
       format.html # index.html.erb
@@ -76,7 +77,10 @@ class EmployeesController < ApplicationController
   # GET /employees/1
   # GET /employees/1.xml
   def show
-    @employee = salor_user.get_employee(params[:id])
+    f, t = assign_from_to(params)
+    @from = f
+    @to = t
+    @employee = @current_vendor.employees.find(params[:id])
     @employee.make_valid
     add_breadcrumb @employee.username,'employee_path(@employee,:vendor_id => params[:vendor_id])'
     respond_to do |format|
@@ -98,7 +102,7 @@ class EmployeesController < ApplicationController
 
   # GET /employees/1/edit
   def edit
-    @employee = salor_user.get_employee(params[:id])
+    @employee = @current_vendor.employees.find(params[:id])
     add_breadcrumb @employee.username,'edit_employee_path(@employee,:vendor_id => params[:vendor_id])'
   end
 
@@ -121,7 +125,7 @@ class EmployeesController < ApplicationController
   # PUT /employees/1
   # PUT /employees/1.xml
   def update
-    @employee = $User.get_employee(params[:id])
+    @employee = @current_vendor.employees.find(params[:id])
     respond_to do |format|
       if @employee.update_attributes(params[:employee])
         @employee.set_role_cache
@@ -138,7 +142,7 @@ class EmployeesController < ApplicationController
   # DELETE /employees/1
   # DELETE /employees/1.xml
   def destroy
-    @employee = Employee.scopied.find(params[:id])
+    @employee = @current_vendor.employees.find(params[:id])
     @employee.kill
 
     respond_to do |format|
@@ -148,8 +152,7 @@ class EmployeesController < ApplicationController
   end
   private 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.employees"),'employees_index_path(:vendor_id => params[:vendor_id])'
   end
 end

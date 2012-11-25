@@ -11,7 +11,7 @@ class CategoriesController < ApplicationController
   cache_sweeper :category_sweeper, :only => [:create, :update, :destroy]
   
   def index
-    @categories = $User.get_categories(params[:page])
+    @categories = Category.scopied(@current_employee).page(params[:page])
     
     respond_to do |format|
       format.html # index.html.erb
@@ -20,7 +20,7 @@ class CategoriesController < ApplicationController
   end
 
   def show
-    @category = Category.by_vendor.visible.find_by_id(params[:id])
+    @category = Category.by_vendor(@current_employee.vendor).visible.find_by_id(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -37,7 +37,7 @@ class CategoriesController < ApplicationController
   end
 
   def edit
-    @category = $User.get_category(params[:id])
+    @category = Category.scopied(@current_employee).find(params[:id])
     add_breadcrumb @category.name,'edit_category_path(@category)'
   end
 
@@ -57,7 +57,7 @@ class CategoriesController < ApplicationController
   end
 
   def update
-    @category = $User.get_category(params[:id])
+    @category = Category.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       if @category.update_attributes(params[:category])
@@ -71,18 +71,17 @@ class CategoriesController < ApplicationController
     end
   end
   def categories_json
-    @categories = Category.scopie.page(params[:page]).per(params[:per_page])
+    @categories = Category.scopied(@current_employee).page(params[:page]).per(params[:per_page])
     render :text => @categories.to_json
   end
   def items_json
-    @items = Item.scopied.find_by_category_id(params[:id]).page(params[:page]).per(params[:per_page])
+    @items = Item.scopied(@current_employee).find_by_category_id(params[:id]).page(params[:page]).per(params[:per_page])
     render :text => @items.to_json
   end
 
   def destroy
-    @category = GlobalData.salor_user.get_category(params[:id])
+    @category = Category.scopied(@current_employee).find(params[:id])
     @category.kill
-    GlobalData.reload(:categories)
     respond_to do |format|
       format.html { redirect_to(categories_url) }
       format.xml  { head :ok }
@@ -92,13 +91,12 @@ class CategoriesController < ApplicationController
   private 
 
   def crumble
-    @vendor = GlobalData.salor_user.get_vendor(GlobalData.salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.categories"),'categories_path(:vendor_id => params[:vendor_id])'
   end
 
   def get_tags
-    @tags = TransactionTag.scopied.all.unshift(TransactionTag.new(:name => ''))
+    @tags = TransactionTag.scopied(@current_employee).all.unshift(TransactionTag.new(:name => ''))
   end
   # {END}
 end

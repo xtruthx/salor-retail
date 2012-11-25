@@ -26,7 +26,7 @@ class VendorsController < ApplicationController
     render :layout => false
   end
   def index
-    @vendors = $User.get_vendors(params[:page])
+    @vendors = @current_employee.get_vendors(params[:page])
     respond_to do |format|
       format.html # index.html.erb
       format.xml  { render :xml => @vendors }
@@ -39,7 +39,7 @@ class VendorsController < ApplicationController
     if not check_license() then
       redirect_to :controller => "home", :action => "index" and return
     end
-    @vendor = salor_user.get_vendor(params[:id])
+    @vendor = @current_employee.get_vendor(params[:id])
     add_breadcrumb @vendor.name,'vendor_path(@vendor)'
     respond_to do |format|
       format.html # show.html.erb
@@ -90,7 +90,7 @@ class VendorsController < ApplicationController
   # PUT /vendors/1
   # PUT /vendors/1.xml
   def update
-    @vendor = salor_user.get_vendor(params[:id])
+    @vendor = @current_employee.get_vendor(params[:id])
     
     respond_to do |format|
       if @vendor.update_attributes(params[:vendor])
@@ -107,7 +107,7 @@ class VendorsController < ApplicationController
   # DELETE /vendors/1
   # DELETE /vendors/1.xml
   def destroy
-    @vendor = salor_user.get_vendor(params[:id])
+    @vendor = @current_employee.get_vendor(params[:id])
     @vendor.kill
 
     respond_to do |format|
@@ -126,10 +126,10 @@ class VendorsController < ApplicationController
       # Normally, it is important to ensure that the total shown represents 100%
       # real, physically present money. You cannot half use Dts, you either track
       # everything with Dts, or you track nothing with them.
-      @drawer_transaction.drawer_amount = $User.get_drawer.amount
+      @drawer_transaction.drawer_amount = @current_employee.get_drawer.amount
       # Ideally, we don't allow a payout of more than is in the drawer.
-      if @drawer_transaction.amount > $User.get_drawer.amount and @drawer_transaction.payout == true then
-        @drawer_transaction.amount = $User.get_drawer.amount
+      if @drawer_transaction.amount > @current_employee.get_drawer.amount and @drawer_transaction.payout == true then
+        @drawer_transaction.amount = @current_employee.get_drawer.amount
       end
       if @drawer_transaction.amount < 0 then
          @drawer_transaction.amount *= -1
@@ -138,12 +138,12 @@ class VendorsController < ApplicationController
       elsif @drawer_transaction.amount > 15000.00 then
         render :nothing => true and return
       end
-      if params[:employee_id] and salor_user.can(:edit_users) then
+      if params[:employee_id] and @current_employee.can(:edit_users) then
         if params[:employee_id] == 'self' then
-          @drawer_transaction.drawer_id = salor_user.get_drawer.id
-          @drawer_transaction.owner = salor_user
+          @drawer_transaction.drawer_id = @current_employee.get_drawer.id
+          @drawer_transaction.owner = @current_employee
         else
-          emp = Employee.scopied.find_by_id(params[:employee_id])
+          emp = Employee.scopied(@current_employee).find_by_id(params[:employee_id])
           if emp.drawer.nil? then
             emp.drawer = Drawer.new
             emp.drawer.save
@@ -152,7 +152,7 @@ class VendorsController < ApplicationController
           @drawer_transaction.owner = emp
         end
       else
-        @drawer_transaction.drawer_id = salor_user.get_drawer.id
+        @drawer_transaction.drawer_id = @current_employee.get_drawer.id
       end
       if @drawer_transaction.save then
         # @drawer_transaction.print if not $Register.salor_printer == true
@@ -172,12 +172,12 @@ class VendorsController < ApplicationController
       else
         raise "Failed to save..."
       end
-    $User.get_drawer.reload
+    @current_employee.get_drawer.reload
   end
 
   def open_cash_drawer
-    @vendor ||= Vendor.find_by_id(GlobalData.salor_user.meta.vendor_id)
-    @vendor.open_cash_drawer
+    @vendor ||= Vendor.find_by_id(@current_employee.get_meta.vendor_id)
+    @vendor.open_cash_drawer(@current_employee)
     render :nothing => true
   end
   def render_open_cashdrawer
@@ -196,7 +196,7 @@ class VendorsController < ApplicationController
 
     @dt = DrawerTransaction.find_by_id(params[:id])
     GlobalData.vendor = @dt.owner.get_meta.vendor
-    $User = @dt.owner
+    @current_employee = @dt.owner
     if not @dt then
       render :text => "Could not find drawer_transaction" and return
     end
@@ -246,22 +246,22 @@ class VendorsController < ApplicationController
   #
   def end_day
     begin
-      @order = initialize_order if salor_user.meta.order_id
+      @order = initialize_order if @current_employee.get_meta.order_id
     rescue
     end
     if not GlobalErrors.any_fatal? then
-      $User.end_day
+      @current_employee.end_day
       atomize(ISDIR, 'cash_drop')
-      if $User.class == User then
-        $User.update_attribute :is_technician, false
+      if @current_employee.class == User then
+        @current_employee.update_attribute :is_technician, false
       end
-      # History.record("employee_sign_out",$User,5) # disabled this because it would break databse replication as soon as one logs into the mirror machine
+      # History.record("employee_sign_out",@current_employee,5) # disabled this because it would break databse replication as soon as one logs into the mirror machine
       session[:user_id] = nil
       session[:user_type] = nil
       cookies[:user_id] = nil
       cookies[:user_type] = nil
       redirect_to :controller => :home, :action => :index
-      $User = nil
+      @current_employee = nil
     end
   end
   # {END}
@@ -271,11 +271,11 @@ class VendorsController < ApplicationController
     # puts  "### Begining edit_field_on_child"
     # and takes up to 2s for lots of items!!
     if params[:field] == "front_end_change" then
-      o = Order.scopied.find_by_id(params[:order_id])
+      o = Order.scopied(@current_employee).find_by_id(params[:order_id])
       o.update_attribute :front_end_change, SalorBase.string_to_float(params[:value]) if o
       render :nothing => true and return
     end
-    if allowed_klasses.include? params[:klass] or GlobalData.salor_user.is_technician?
+    if allowed_klasses.include? params[:klass] or @current_employee.is_technician?
 #        puts  "### Class is allowed"
       kls = Kernel.const_get(params[:klass])
       if not params[:id] and params[:order_id] then
@@ -289,13 +289,13 @@ class VendorsController < ApplicationController
           render :layout => false and return
         end
 #         if @inst.class == Order and @inst.paid == 1 then
-#           @order = $User.get_new_order
+#           @order = @current_employee.get_new_order
 # #           puts "## Order is paid 2"
 #           render :layout => false and return
 #         end
         if @inst.respond_to? params[:field]
 #            puts  "### Inst responds_to field #{params[:field]}"
-          if not salor_user.owns_this?(@inst) and not GlobalData.salor_user.is_technician? then
+          if not @current_employee.owns_this?(@inst) and not @current_employee.is_technician? then
              puts  "### User doesn't own resource"
             raise I18n.t("views.errors.no_access_right")
           end
@@ -486,7 +486,7 @@ class VendorsController < ApplicationController
       if kls.exists? params[:model_id] then
         @inst = kls.find(params[:model_id])
         if @inst.respond_to? params[:field]
-          if not salor_user.owns_this?(@inst) then
+          if not @current_employee.owns_this?(@inst) then
             raise I18n.t("views.errors.no_access_right")
           end
           @inst.send(params[:field].to_sym,params[:value])

@@ -1,5 +1,5 @@
 <div class="list">
-  <% if $Conf.items_view_list then %>
+  <% if @current_configuration.items_view_list then %>
     <table width="100%" class="stripe-me">
     <tr>
       <% [:name,:base_price,:sku,:quantity,:quantity_sold, '',''].each do |key| %>

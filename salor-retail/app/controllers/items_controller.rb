@@ -19,9 +19,9 @@ class ItemsController < ApplicationController
     if params[:order_by] then
       key = params[:order_by]
       session[key] = (session[key] == 'DESC') ? 'ASC' : 'DESC'
-      @items = Item.scopied.where("items.sku NOT LIKE 'DMY%'").page(params[:page]).per(25).order("#{key} #{session[key]}")
+      @items = Item.scopied(@current_employee).where("items.sku NOT LIKE 'DMY%'").page(params[:page]).per(25).order("#{key} #{session[key]}")
     else
-      @items = Item.scopied.where("items.sku NOT LIKE 'DMY%'").page(params[:page]).per(25).order("id desc")
+      @items = Item.scopied(@current_employee).where("items.sku NOT LIKE 'DMY%'").page(params[:page]).per(25).order("id desc")
     end
     Node.flush
     respond_to do |format|
@@ -36,11 +36,11 @@ class ItemsController < ApplicationController
     if not check_license() then
       redirect_to :controller => "home", :action => "index" and return
     end
-    @item = $User.get_item(params[:id])
+    @item = Item.scopied(@current_employee).find_by_id(params[:id])
     @from, @to = assign_from_to(params)
     @from = @from ? @from.beginning_of_day : 1.month.ago.beginning_of_day
     @to = @to ? @to.end_of_day : DateTime.now
-    @sold_times = OrderItem.scopied.find(:all, :conditions => {:sku => @item.sku, :hidden => 0, :is_buyback => false, :refunded => false, :created_at => @from..@to}).collect do |i| 
+    @sold_times = OrderItem.scopied(@current_employee).find(:all, :conditions => {:sku => @item.sku, :hidden => 0, :is_buyback => false, :refunded => false, :created_at => @from..@to}).collect do |i| 
       (i.order.paid == 1 and not i.order.is_proforma) ? i.quantity : 0 
     end.sum
   end
@@ -48,7 +48,7 @@ class ItemsController < ApplicationController
   # GET /items/new
   # GET /items/new.xml
   def new
-    @item = Item.new(:vendor_id => GlobalData.salor_user.meta.vendor_id)
+    @item = Item.new(:vendor_id => @current_employee.meta.vendor_id)
     respond_to do |format|
       format.html # new.html.erb
       format.xml  { render :xml => @item }
@@ -57,7 +57,7 @@ class ItemsController < ApplicationController
 
   # GET /items/1/edit
   def edit
-    @item = Item.scopied.where(["id = ? or sku = ? or sku = ?",params[:id],params[:id],params[:keywords]]).first
+    @item = Item.scopied(@current_employee).where(["id = ? or sku = ? or sku = ?",params[:id],params[:id],params[:keywords]]).first
     if not @item then
       redirect_to(:action => 'new', :notice => I18n.t("system.errors.item_not_found")) and return
     end
@@ -72,7 +72,7 @@ class ItemsController < ApplicationController
     # gross magic won't work
     # TODO Test this as it's no longer necessary
     
-    @item = Item.all_seeing.find_by_sku(params[:item][:sku])
+    @item = Item.by_vendor(@current_vendor).find_by_sku(params[:item][:sku])
     if @item then
       @item.attributes = params[:item]
       flash[:notice] = I18n.t('system.errors.sku_must_be_unique',:sku => @item.sku)
@@ -81,11 +81,12 @@ class ItemsController < ApplicationController
 
     @item = Item.new
     @item.tax_profile_id = params[:item][:tax_profile_id]
+    @item.tax_profile_id ||= TaxProfile.by_vendor(@current_vendor).first
     @item.attributes = params[:item]
     @item.sku.upcase!
 
     respond_to do |format|
-      if $User.owns_vendor?(@item.vendor_id) and @item.save
+      if @current_employee.owns_vendor?(@item.vendor_id) and @item.save
         @item.set_model_owner(salor_user)
         format.html { redirect_to(:action => 'new', :notice => I18n.t("views.notice.model_create", :model => Item.model_name.human)) }
         format.xml  { render :xml => @item, :status => :created, :location => @item }
@@ -113,7 +114,7 @@ class ItemsController < ApplicationController
   # PUT /items/1
   # PUT /items/1.xml
   def update
-    @item = salor_user.get_item(params[:id])
+    @item = Item.by_vendor(@current_vendor).find_by_id(params[:id])
     saved = false
     params[:item][:sku].upcase!
     if @item.nil? then
@@ -149,12 +150,12 @@ class ItemsController < ApplicationController
   def update_real_quantity
     add_breadcrumb I18n.t("menu.update_real_quantity"), items_update_real_quantity_path
     if request.post? then
-      @item = Item.scopied.find_by_sku(params[:sku])
+      @item = Item.scopied(@current_employee).find_by_sku(params[:sku])
       @item.update_attribute(:real_quantity, params[:quantity])
     end
   end
   def move_real_quantity
-    Item.scopied.where("real_quantity > 0").each do |item|
+    Item.scopied(@current_employee).where("real_quantity > 0").each do |item|
       item.update_attribute(:quantity, item.real_quantity)
       item.update_attribute(:real_quantity, 0)
     end
@@ -165,7 +166,7 @@ class ItemsController < ApplicationController
   # DELETE /items/1.xml
   def destroy
     @item = Item.find_by_id(params[:id])
-    if $User.owns_this?(@item) then
+    if @current_employee.owns_this?(@item) then
       if @item.order_items.any? then
         @item.update_attribute(:hidden,1)
         @item.update_attribute(:sku, rand(999).to_s + 'OLD:' + @item.sku)
@@ -193,26 +194,23 @@ class ItemsController < ApplicationController
   end
   #
   def search
-    if not salor_user.owns_vendor? salor_user.meta.vendor_id then
-      salor_user.meta.vendor_id = salor_user.get_default_vendor.id
-    end
     @items = []
     @customers = []
     @orders = []
     if params[:klass] == 'Item' then
-      @items = Item.scopied.page(params[:page]).per($Conf.pagination)
+      @items = Item.scopied(@current_employee).by_keywords(params[:keywords]).page(params[:page]).per(@current_configuration.pagination)
     elsif params[:klass] == 'Order'
       if params[:keywords].empty? then
-        @orders = Order.by_vendor.by_user.order("id DESC").page(params[:page]).per($Conf.pagination)
+        @orders = Order.by_vendor.by_user.by_keywords(params[:keywords]).order("id DESC").page(params[:page]).per(@current_configuration.pagination)
       else
-        @orders = Order.by_vendor.by_user.where("id = '#{params[:keywords]}' or nr = '#{params[:keywords]}' or tag LIKE '%#{params[:keywords]}%'").page(params[:page]).per($Conf.pagination)
+        @orders = Order.by_vendor.by_user.by_keywords(params[:keywords]).where("id = '#{params[:keywords]}' or nr = '#{params[:keywords]}' or tag LIKE '%#{params[:keywords]}%'").page(params[:page]).per(@current_configuration.pagination)
       end
     else
-      @customers = Customer.scopied.page(params[:page]).per($Conf.pagination)
+      @customers = Customer.scopied(@current_employee).by_keywords(params[:keywords]).page(params[:page]).per(@current_configuration.pagination)
     end
   end
   def item_json
-    @item = Item.all_seeing.find_by_sku(params[:sku], :select => "name,sku,id,purchase_price")
+    @item = Item.by_vendor(@current_vendor).find_by_sku(params[:sku], :select => "name,sku,id,purchase_price")
   end
   def edit_location
     respond_to do |format|
@@ -286,7 +284,7 @@ class ItemsController < ApplicationController
     @from = @from ? @from.beginning_of_day : DateTime.now.beginning_of_day
     @to = @to ? @to.end_of_day : @from.end_of_day
     if params[:from] then
-      @items = BrokenItem.scopied.where(["created_at between ? and ?", @from, @to])
+      @items = BrokenItem.scopied(@current_employee).where(["created_at between ? and ?", @from, @to])
       text = []
       if @items.any? then
         text << @items.first.csv_header
@@ -344,14 +342,14 @@ class ItemsController < ApplicationController
   def wholesaler_update
     
     uploader = FileUpload.new
-    GlobalData.conf.csv_imports.split("\n").each do |line|
+    @current_configuration.csv_imports.split("\n").each do |line|
       parts = line.chomp.split(',')
       next if parts[0].nil?
       begin
       if parts[0].include? 'http://' or parts[0].include? 'https://' then
         file = get_url(parts[0])
       else
-        file = get_url(GlobalData.conf.csv_imports_url + "/" + parts[0])
+        file = get_url(@current_configuration.csv_imports_url + "/" + parts[0])
       end
       if parts[1].include? "dist*" then
         uploader.send('dist'.to_sym, parts[2], file.body,true) # i.e. dist* means an internal source
@@ -372,7 +370,7 @@ class ItemsController < ApplicationController
   end
 
   def download
-    @items = Item.scopied
+    @items = Item.scopied(@current_employee)
     data = render_to_string :layout => false
     send_data(data,:filename => 'items.csv', :type => 'text/csv')
   end
@@ -380,13 +378,13 @@ class ItemsController < ApplicationController
   def inventory_report
     add_breadcrumb I18n.t("menu.update_real_quantity"), items_update_real_quantity_path
     add_breadcrumb I18n.t("menu.inventory_report"), items_inventory_report_path
-    @items = Item.scopied.where('real_quantity > 0')
-    @categories = Category.scopied
+    @items = Item.scopied(@current_employee).where('real_quantity > 0')
+    @categories = Category.scopied(@current_employee)
   end
   
   def selection
     if params[:order_id]
-      order = Order.scopied.find_by_id(params[:order_id])
+      order = Order.scopied(@current_employee).find_by_id(params[:order_id])
       @skus = "ORDER#{order.id}"
       #order.order_items.visible.collect{ |oi| "{OI#{oi.id}}" }.join("\n")
     else
@@ -396,8 +394,7 @@ class ItemsController < ApplicationController
 
   private 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.items"),'items_path(:vendor_id => params[:vendor_id])'
   end
   # {END}

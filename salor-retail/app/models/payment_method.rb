@@ -10,11 +10,11 @@ class PaymentMethod < ActiveRecord::Base
   before_save :process
   include SalorModel
   include SalorBase
-  def self.types_list
+  def self.types_list(employee)
     types = []
     pmx = I18n.t("system.payment_external_types").split(',')
     pmi = I18n.t("system.payment_internal_types").split(',')
-    tms = TenderMethod.scopied.all
+    tms = TenderMethod.scopied(employee).all
      i = 0
     pmi.each do |p|
       types << [pmx[i],p]

@@ -1,7 +1,21 @@
-= link_to salor_icon(:add,{},32),new_button_path
-= render :partial => 'popup'
+
+%table{:width => '90%', :align => 'center'}
+  %tr
+    %td
+      %table{:id=>'tool_table', :align=>'center'}
+        %tr
+          %td
+            %div{ :class => 'tool-icon'}
+              = link_to salor_icon(:add,{},32),new_button_path
+              %br
+              %span= I18n.t('views.single_words.new')
+  %tr
+    %td
+      = render :partial => 'popup'
 :javascript
   $(function () {
     $('#buttons').show();
-    $('#buttons').offset({top: 150});
+    $('#buttons').width($(window).width() * 0.90);
+    shared.helpers.center($('#buttons'));
+    $('#buttons').offset({top: 170});
   });

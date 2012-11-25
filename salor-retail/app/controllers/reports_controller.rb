@@ -41,8 +41,7 @@ class ReportsController < ApplicationController
 
   private
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id) if @vendor.nil?
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.report"),'reports_path(:vendor_id => params[:vendor_id])'
   end
 

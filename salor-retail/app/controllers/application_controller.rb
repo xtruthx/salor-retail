@@ -98,8 +98,6 @@ class ApplicationController < ActionController::Base
         user= User.find_by_id(session[:user_id].to_i)
       else
         user= Employee.find_by_id(session[:user_id])
-        $Vendor = user.vendor if user #Because Global State is maintained across requests.
-        $User = user
       end
       return user
     end
@@ -120,40 +118,31 @@ class ApplicationController < ActionController::Base
     ['LoyaltyCard','Item','ShipmentItem','Vendor','Category','Location','Shipment','Order','OrderItem','CashRegisterDaily']
   end
   def initialize_instance_variables
+    @current_employee = salor_user
+    $User = @current_employee
+    @current_vendor = @current_employee.vendor
     if params[:vendor_id] and not params[:vendor_id].blank? then
-      salor_user.meta.update_attribute(:vendor_id,params[:vendor_id])
+      @current_employee.meta.update_attribute(:vendor_id,params[:vendor_id])
+      @current_vendor = Vendor.find_by_id(params[:vendor_id])
     end
-    if salor_user and salor_user.meta.vendor_id.nil? then
-      salor_user.meta.update_attribute(:vendor_id,salor_user.get_default_vendor.id)
+    if @current_employee and @current_employee .meta.vendor_id.nil? then
+      @current_employee.meta.update_attribute(:vendor_id,@current_employee.get_default_vendor.id)
     end
     if params[:cash_register_id] then
-      salor_user.meta.update_attribute(:cash_register_id,params[:cash_register_id])
+      @current_employee.meta.update_attribute(:cash_register_id,params[:cash_register_id])
     end
-    if salor_user then
-	    @tax_profiles = salor_user.get_tax_profiles
-	    if salor_user.meta.cash_register_id then
-	      @cash_register = CashRegister.find_by_id(salor_user.meta.cash_register_id)
-	    else
-	      @cash_register = CashRegister.new(:name => 'Unk')
+    if @current_employee then
+	    @tax_profiles = TaxProfile.scopied(@current_employee)
+      if @current_employee.meta.cash_register_id then
+        @current_register = CashRegister.find_by_id(@current_employee.meta.cash_register_id)
 	    end
-	    $Register = @cash_register
-	    GlobalData.cash_register = @cash_register
-	    if Vendor.exists?(salor_user.meta.vendor_id) then
-	       @vendor = Vendor.find(salor_user.meta.vendor_id)
+      if Vendor.exists?(@current_employee.meta.vendor_id) then
+        @current_vendor = Vendor.find(@current_employee.meta.vendor_id)
 	    else 
-	       @vendor = Vendor.new
-	       @vendor.name = I18n.t("views.errors.unknown_vendor")
+	      raise "NoVendorExists"
 	    end
     end
-    GlobalData.vendor = @vendor
-    $Vendor = @vendor
-    GlobalData.conf = @vendor.salor_configuration if @vendor
-    if @vendor then 
-      $Conf = @vendor.salor_configuration
-    end
-    if !$Conf then
-      $Conf = Vendor.first.salor_configuration
-    end
+    @current_configuration = @current_vendor.salor_configuration if @current_vendor
   end
 
   def layout_by_response
@@ -166,9 +155,6 @@ class ApplicationController < ActionController::Base
   def loadup
     $Notice = ""
     SalorBase.log_action("ApplicationController.loadup","--- New Request -- \n" + params.inspect)
-    GlobalData.refresh # Because classes are cached across requests
-	  Job.run # Cron jobs for the application
-	  GlobalData.base_locale = AppConfig.base_locale
     I18n.locale = AppConfig.locale
     
     if params[:license_accepted].to_s == "true" then
@@ -181,9 +167,6 @@ class ApplicationController < ActionController::Base
         salor_user.meta = Meta.new
         salor_user.meta.save
       end
-    else 
-      $User = nil # $User is being set somewhere before this is even called, which is weird.
-      @owner = User.new
     end
     I18n.locale = params[:locale] if params[:locale]
     add_breadcrumb I18n.t("menu.home"),'home_user_employee_index_path'
@@ -228,56 +211,26 @@ class ApplicationController < ActionController::Base
   end
   def initialize_order
     if params[:order_id] then
-      o = Order.scopied.where("id = #{params[:order_id]} and (paid IS NULL or paid = 0)").first
+      o = Order.scopied(@current_employee).where("id = #{params[:order_id]} and (paid IS NULL or paid = 0)").first
       # puts  "!!!!!!!! Found order from params!"
-      $User.get_meta.update_attribute :order_id, o.id
+      @current_employee.get_meta.update_attribute :order_id, o.id
+      o.update_attribute :employee_id, @current_employee.id
       return o if o
     end
-    if not GlobalData.salor_user.meta.order_id or not Order.exists? GlobalData.salor_user.meta.order_id then
-      order = GlobalData.salor_user.get_new_order
-      GlobalData.salor_user.meta.update_attribute(:order_id,order.id)
+    if not @current_employee.meta.order_id or not Order.exists? @current_employee.meta.order_id then
+      order = @current_employee.get_new_order
+      @current_employee.meta.update_attribute(:order_id,order.id)
+      order.update_attribute :employee_id, @current_employee.id
     else
-      order = GlobalData.salor_user.get_order(GlobalData.salor_user.meta.order_id)
+      order = @current_employee.get_order(@current_employee.meta.order_id)
+      order.update_attribute :employee_id, @current_employee.id
     end
     return order
   end
   #
   def setup_global_data
-    vars = {}
-    var_names = [:vendor_id,:order_id,:cash_register_id]
-    var_names.each do |var|
-      if session[var].nil? then
-        vars[var.to_s] = params[var]
-      else
-        vars[var.to_s] = session[var]
-      end
-    end
-    
-    GlobalData.session = vars
-    GlobalData.request = request
     $Request = request
     $Params = params
-    vars = {}
-    var_names = [:no_inc,:sku,:controller,:action,:page,:vendor_id,:keywords]
-    var_names.each do |var|
-      vars[var.to_s] = params[var] 
-    end
-    
-    GlobalData.params = vars
-    if salor_user
-      GlobalData.salor_user = salor_user
-      GlobalData.cash_register = @cash_register
-      GlobalData.user_id = salor_user.get_owner.id
-      $User = salor_user
-      $Vendor = $User.vendor
-      $Meta = salor_user.get_meta
-      tps = salor_user.get_tax_profiles
-      if tps.any? then
-        GlobalData.tax_profiles = tps
-      else
-        GlobalData.tax_profiles = nil
-      end
-    end
   end
   def check_role
     if not role_check(params) then 

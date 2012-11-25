@@ -9,7 +9,7 @@ module SalorScope
   def self.included(klass)
     begin
     if klass.column_names.include? 'vendor_id'
-      klass.scope(:by_vendor, lambda { klass.where(:vendor_id => $User.vendor_id) if $User })
+      klass.scope(:by_vendor, lambda { |v| klass.where(:vendor_id => v.id) })
     end
 
     if klass.column_names.include? 'hidden'
@@ -18,22 +18,27 @@ module SalorScope
     end
   
     if klass.class == Order
-      klass.scope(:by_user , lambda { klass.where(:employee_id => $User.id.to_s) if $User and $User.is_employee? and not $User.can(:head_cashier) and not $User.can(:edit_orders) })
+      klass.scope(:by_user , lambda { |user| 
+        klass.where(:employee_id => user.id.to_s) if user and 
+                                                      user.is_employee? and not 
+                                                      user.can(:head_cashier) and not 
+                                                      user.can(:edit_orders) 
+      })
     elsif klass.column_names.include?('user_id') and [TaxProfile,Shipper,ShipmentType,TransactionTag].include?(klass.class) == false
-      klass.scope(:by_user , lambda { klass.where(:user_id => $User.get_owner.id.to_s) if $User })
+      klass.scope(:by_user , lambda { |user| klass.where(:user_id => user.get_owner.id.to_s) if user })
     else
-      klass.scope(:by_user, lambda {})
+      klass.scope(:by_user, lambda {|user| })
     end
     
-    klass.scope(:scopied, lambda { klass.by_keywords.visible.by_vendor.by_user })
+    klass.scope(:scopied, lambda { |user| klass.visible.by_vendor(user.vendor) })
     
-    klass.scope(:all_seeing, lambda { klass.by_keywords.by_vendor.by_user })
+    klass.scope(:all_seeing, lambda { |user| klass.by_vendor(user.vendor_id) })
     
-    klass.scope(:by_keywords , lambda {
+    klass.scope(:by_keywords , lambda {|keywords|
       conds = []
       vals = []
       # TODO: Get rid of GlobalData
-      words = GlobalData.params.keywords if GlobalData.params
+      words = keywords
       return if words.nil? or words.blank?
       conds << "id = '#{words}'"
       if klass.column_names.include?('name') then

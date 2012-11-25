@@ -1,34 +1,83 @@
 <%= raw content_box_top(t("views.listing_items")) %>
-<%= link_to "Export","/items/export_broken_items" %>
-<table>
+<table align="center" width="90%">
   <tr>
-    <th><%= t("activerecord.attributes.name") %></th>
-    <th><%= t("activerecord.attributes.sku") %></th>
-    <th><%= t("activerecord.attributes.quantity") %></th>
-    <th><%= t("activerecord.attributes.base_price") %></th>
-    <th><%= t("activerecord.models.vendor.one") %></th>
-    <th><%= t("activerecord.attributes.owner") %></th>
-    <th><%= t("activerecord.models.shipper.one") %></th>
-    <th></th>
-    <th></th>
+    <td colspan="2">
+      <table align="center">
+        <tr> 
+          <td>
+            <div class="tool-icon" >
+              <%= link_to salor_icon(:add,{},32),new_broken_item_path %>
+            <br /><span class='icon-caption'><%= I18n.t("views.single_words.new") %></span>
+            </div>
+          </td>
+          <td>
+            <div class="tool-icon" >
+                <img src='/images/icons/down_32.png' onmousedown="window.location = '/items/export_broken_items'">
+              <br /><span class='icon-caption'><%= I18n.t("menu.download") %></span>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
   </tr>
+  
+  <tr>
+    <td colspan="2">
 
-<% @broken_items.each do |broken_item| %>
-  <tr>
-    <td><%= broken_item.name %></td>
-    <td><%= broken_item.sku %></td>
-    <td><%= broken_item.quantity %></td>
-    <td><%= broken_item.base_price %></td>
-    <td><%= broken_item.vendor.name %></td>
-    <td><%= broken_item.owner.username if broken_item.owner %></td>
-    <td><%= broken_item.shipper.name if broken_item.shipper%></td>
-    <td><%= link_to 'Edit', edit_broken_item_path(broken_item) %></td>
-    <td><%= link_to 'Destroy', broken_item, :confirm => 'Are you sure?', :method => :delete %></td>
+      <table width="100%" class="stripe-me">
+        <tr>
+          <% [:name,:purchase_price,:sku,:quantity,:vendor_id,:owner_id,:the_shipper, '',''].each do |key| %>
+            <% if not key == '' %>
+              <th class="pointer" onclick="window.location = '?order_by=<%= key %>&page=<%= params[:page]%>';"><%= I18n.t("activerecord.attributes.#{key}").upcase %></th>
+            <% else %>
+              <th> &nbsp;</th>
+            <% end %>
+          <% end %>
+        </tr>
+      <% @broken_items.each do |item| %>
+        <tr>
+          <td width="30%">
+            <%= item.name %>
+          </td>
+          <td align="right">
+            <%= item.item.nil? ? number_to_currency(0) : number_to_currency(item.item.purchase_price) %>
+          </td>
+          <td align="center">
+            <%= item.sku %>
+          </td>
+          <td align="center">
+            <%= item.quantity %>
+          </td>
+
+          <td align="center">
+            <%= item.vendor.name %>
+          </td>
+          <td align="center">
+            <%= item.owner.username %>
+          </td>
+          <td align="center">
+            <%= item.shipper.name %>
+          </td>
+          <td>
+          <div onmousedown="window.location ='<%= edit_item_path(item)%>';" style="padding: 5px;">
+            <%= link_to(image_tag('/images/icons/' + icon(:edit,32)), edit_broken_item_path(item)) %>
+            </div>
+          </td>
+          <td>
+            <%= link_to(image_tag('/images/icons/' + icon(:delete,32)), item, :confirm => 'Are you sure?', :method => :delete) %>
+          </td>
+        </tr>
+      <% end %>
+      </table>
+    </table>
+    </td>
   </tr>
-<% end %>
+  <tr>
+    <td colspan="2">
+      <div class="pagination" align="center">
+        <%= paginate @broken_items if @broken_items %>
+      </div>
+    </td>
+  </tr>
 </table>
-<%= link_to I18n.t('views.single_words.new'),'/broken_items/new' %>
-<div class="pagination" align="center">
-  <%= paginate @broken_items if @broken_items %>
-</div>
 <%= raw content_box_bottom %>

@@ -13,7 +13,7 @@ class DiscountsController < ApplicationController
   # GET /discounts
   # GET /discounts.xml
   def index
-    @discounts = salor_user.get_discounts
+    @discounts = Discount.scopied(@current_employee).page(params[:page]).limit(25)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -24,7 +24,7 @@ class DiscountsController < ApplicationController
   # GET /discounts/1
   # GET /discounts/1.xml
   def show
-    @discount = salor_user.get_discount(params[:id])
+    @discount = Discount.scopied(@current_employee).find_by_id(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -45,16 +45,16 @@ class DiscountsController < ApplicationController
 
   # GET /discounts/1/edit
   def edit
-    @discount = salor_user.get_discount(params[:id])
+    @discount = Discount.scopied(@current_employee).find_by_id(params[:id])
   end
 
   # POST /discounts
   # POST /discounts.xml
   def create
     @discount = Discount.new(params[:discount])
-    OrderItem.reload_discounts
     respond_to do |format|
       if @discount.save
+        OrderItem.reload_discounts
         format.html { redirect_to(:action => 'new', :notice => I18n.t("views.notice.model_create", :model => Discount.model_name.human)) }
         format.xml  { render :xml => @discount, :status => :created, :location => @discount }
       else
@@ -67,10 +67,11 @@ class DiscountsController < ApplicationController
   # PUT /discounts/1
   # PUT /discounts/1.xml
   def update
-    @discount = salor_user.get_discount(params[:id])
-    OrderItem.reload_discounts
+    @discount = Discount.scopied(@current_employee).find_by_id(params[:id])
+    
     respond_to do |format|
       if @discount.update_attributes(params[:discount])
+        OrderItem.reload_discounts
         format.html { render :action => 'edit', :notice => 'Discount was successfully updated.' }
         format.xml  { head :ok }
       else
@@ -83,7 +84,7 @@ class DiscountsController < ApplicationController
   # DELETE /discounts/1
   # DELETE /discounts/1.xml
   def destroy
-    @discount = salor_user.get_discount(params[:id])
+    @discount = Discount.scopied(@current_employee).find_by_id(params[:id])
     if @discount then
       @discount.kill
     end
@@ -95,8 +96,7 @@ class DiscountsController < ApplicationController
   end
   private 
   def crumble
-    @vendor = salor_user.get_vendor(salor_user.meta.vendor_id) if @vendor.nil?
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.discounts"),'discounts_path(:vendor_id => params[:vendor_id])'
   end
   # {END}

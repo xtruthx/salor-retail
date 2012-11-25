@@ -203,7 +203,7 @@ class Order < ActiveRecord::Base
 	  end
 	  if item.is_gs1 == true then
       # this is a gs1 item.
-      oi = OrderItem.new
+      oi = OrderItem.new(:employee => self.employee)
       oi.set_item(item)
       oi.is_valid = true
       oi.order_id = self.id
@@ -221,13 +221,13 @@ class Order < ActiveRecord::Base
     end
 
     # create new OrderItem
-	  oi = OrderItem.new
+	  oi = OrderItem.new(:employee => self.employee)
 	  if oi.nil? then
-	    oi = OrderItem.new # MF: doesn't make sense?
+	    oi = OrderItem.new(:employee => self.employee) # MF: doesn't make sense? I know right...but it fixed something so just leave it for now.
 	  end
 	  oi.order_id = self.id
     oi.vendor_id = self.vendor_id
-	  oi.no_inc = true if GlobalData.params and GlobalData.params.no_inc
+	  oi.no_inc = true if $Params and $Params[:no_inc]
 	  ret = oi.set_item(item)
 	  return oi if not ret
 	  # self.order_items << oi
@@ -254,7 +254,7 @@ class Order < ActiveRecord::Base
 	#end
 	#
 	def remove_order_item(oi)
-	  if self.paid == 1 and not $User.is_technician? then
+	  if self.paid == 1 and not self.employee.is_technician? then
 	    GlobalErrors.append("system.errors.cannot_edit_completed_order")
 	    return
 	  end
@@ -305,7 +305,7 @@ class Order < ActiveRecord::Base
 	#
 	def calculate_totals(speedy = false)
 #     puts "## Calculate_Totals called #{speedy}"
-	  if self.paid == 1 and not $User.is_technician? then
+	  if self.paid == 1 and not self.employee.is_technician? then
 	    #GlobalErrors.append("system.errors.cannot_edit_completed_order",self)
 	    return
 	  end
@@ -362,7 +362,7 @@ class Order < ActiveRecord::Base
       # Now let's consider Store Wide Discounts, for item/location/percent specific discounts,
       # see Item.price    
       if not self.subtotal_is_locked then
-        @vendor_discounts ||= Discount.scopied.where("applies_to = 'Vendor' and amount_type = 'fixed'")
+        @vendor_discounts ||= Discount.scopied(self.employee).where("applies_to = 'Vendor' and amount_type = 'fixed'")
         dids = []
         self.discount_amount = 0
         @vendor_discounts.each do |discount|
@@ -374,8 +374,8 @@ class Order < ActiveRecord::Base
           self.discount_ids = dids
         end
         begin
-          if $Conf and self.lc_points then
-            disc = $Conf.dollar_per_lp * self.lc_points
+          if self.vendor.salor_configuration and self.lc_points then
+            disc = self.vendor.salor_configuration.dollar_per_lp * self.lc_points
             self.subtotal -= disc
             self.update_attribute(:lc_discount_amount, disc)
           end
@@ -390,7 +390,7 @@ class Order < ActiveRecord::Base
         #self.subtotal = 0
       #end
 #       puts "AND FINALLY: #{self.subtotal} + #{self.tax} "
-      if $Conf.calculate_tax then
+      if self.vendor.salor_configuration.calculate_tax then
         self.total = self.subtotal.round(2) + self.tax.round(2)
       else
         self.total = self.subtotal.round(2)
@@ -438,7 +438,7 @@ class Order < ActiveRecord::Base
   #
   def gross
     refunded_ttl = self.order_items.where("order_id = #{self.id} and behavior != 'coupon' and is_buyback is false and activated is false and refunded is TRUE").sum(:total).round(2)
-    if $Conf.calculate_tax then
+    if self.vendor.salor_configuration.calculate_tax then
       taxttl = self.order_items.visible.where("order_id = #{self.id} and behavior != 'coupon' and is_buyback is false and activated is false and refunded is FALSE").sum(:tax).round(2)
       if self.tax_free then
         taxttl = 0
@@ -479,7 +479,7 @@ class Order < ActiveRecord::Base
 #     log_action "OrderId Is: #{self.id}"
     self.paid = 1
     self.created_at = Time.now
-    self.drawer_id = $User.get_drawer.id
+    self.drawer_id = self.employee.get_drawer.id
     self.nr = self.vendor.get_unique_model_number('order')
     self.save
     self.reload
@@ -503,12 +503,12 @@ class Order < ActiveRecord::Base
         #ottl *= -1 if ottl < 0
         create_drawer_transaction(self.get_drawer_add,:payout,{:tag => "CompleteOrder"})
       else
-        $User.meta.update_attribute :last_order_id, self.id
+        self.employee.meta.update_attribute :last_order_id, self.id
         create_drawer_transaction(ottl,:drop,{:tag => "CompleteOrder"})
         if self.change_given > 0
           PaymentMethod.create(:vendor_id => self.vendor_id, :internal_type => 'Change', :amount => - self.change_given, :order_id => self.id)
         end
-        log_action("OID: #{self.id} USER: #{$User.username} OTTL: #{ottl} DRW: #{$User.get_drawer.amount}")
+        log_action("OID: #{self.id} USER: #{self.employee.username} OTTL: #{ottl} DRW: #{self.employee.get_drawer.amount}")
       end
       lc = self.loyalty_card
       self.lc_points = 0 if self.lc_points.nil?
@@ -592,8 +592,8 @@ class Order < ActiveRecord::Base
     dt = DrawerTransaction.new(opts)
     dt.amount = amount
     dt[type] = true
-    dt.drawer_id = $User.get_drawer.id
-    dt.drawer_amount = $User.get_drawer.amount
+    dt.drawer_id = self.employee.get_drawer.id
+    dt.drawer_amount = self.employee.get_drawer.amount
     dt.order_id = self.id
     if dt.amount < 0 then
       dt.payout = true
@@ -602,11 +602,11 @@ class Order < ActiveRecord::Base
     end
     if dt.save then
       if type == :payout then
-        $User.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount - dt.amount)
+        self.employee.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount - dt.amount)
       elsif type == :drop then
-        $User.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount + dt.amount)
+        self.employee.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount + dt.amount)
       end
-      $User.reload
+      self.employee.reload
     end
   end
     
@@ -620,7 +620,7 @@ class Order < ActiveRecord::Base
   end
 
   def toggle_refund(x, refund_payment_method)
-    if not $User.get_drawer.amount >= self.total then
+    if not self.employee.get_drawer.amount >= self.total then
       GlobalErrors.append_fatal("system.errors.not_enough_in_drawer",self)
       return
     end
@@ -737,7 +737,7 @@ class Order < ActiveRecord::Base
     # sum_taxes is the taxable sum of money charged by the system
     sum_taxes = Hash.new
     # we turn sum_taxes into a hash of hashes 
-    TaxProfile.scopied.each { |t| sum_taxes[t.id] = {:total => 0, :letter => t.letter, :value => 0} }
+    TaxProfile.scopied(self.employee).each { |t| sum_taxes[t.id] = {:total => 0, :letter => t.letter, :value => 0} }
     subtotal1 = 0
     discount_subtotal = 0
     rebate_subtotal = 0
@@ -990,7 +990,7 @@ class Order < ActiveRecord::Base
     # what the system charged them for taxes instead of what it should or should not be. 
     # because we don't allow for the deletion of TaxProfiles anymore, we just hid them
     # we can get away with using all for the time being 
-    # TaxProfile.scopied.each do |tax|
+    # TaxProfile.scopied(self.employee).each do |tax|
     TaxProfile.all.each do |tax|
       next if sum_taxes[tax.id] == nil or sum_taxes[tax.id][:total] == 0
       # I.E. what is the percentage decimal of the tax value
@@ -1000,7 +1000,7 @@ class Order < ActiveRecord::Base
         gro =  sum_taxes[tax.id][:total]
       else
         # How much of the sum goes to the store after taxes
-        if $Conf and not $Conf.calculate_tax then
+        if self.vendor.salor_configuration and not self.vendor.salor_configuration.calculate_tax then
           net = sum_taxes[tax.id][:total] / (1.00 + fact)
           gro = sum_taxes[tax.id][:total]
         else

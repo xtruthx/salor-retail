@@ -12,6 +12,11 @@ function showHideCustomerOrRebate() {
     $('.pos-customer').show();
   }
 }
+function showButtonPopup() {
+    $('#buttons').show();
+    $('#buttons').width($(window).width() * 0.90);
+    shared.helpers.center($('#buttons'));
+}
 function clearOrder() {
   $.get('/orders/clear?order_id=' + Order.id);
 }
@@ -37,7 +42,7 @@ function clickBuyOrderButton(id) {
         <div id="show_customers" onmousedown="$('.last-five-orders').show();" class="input pos-button">
           <%= t("activerecord.models.customer.other")%>
         </div>
-        <div id="show_butons" onmousedown="$('#buttons').show();" class="input pos-button">
+        <div id="show_butons" onmousedown="showButtonPopup();" class="input pos-button">
           <%= t("menu.buttons")%>
         </div>
         <div id="show_search" onmousedown="showSearch();" class="input pos-button">

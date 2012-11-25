@@ -204,11 +204,11 @@ class Item < ActiveRecord::Base
       return Item.scopied.where("name LIKE '%#{parts[1]}%'")
     end
   end
-  def self.get_by_code(code)
+  def self.get_by_code(code,emp)
     # Let's see if they entered a price
     pm = code.match(/(\d{1,9}[\.\,]\d{1,2})/)
     if pm and pm[1] then
-      i = Item.scopied.where("sku LIKE 'DMY%' and base_price = #{SalorBase.string_to_float(code)}") 
+      i = Item.scopied(emp).where("sku LIKE 'DMY%' and base_price = #{SalorBase.string_to_float(code)}") 
       if i.empty? then
         i = Item.scopied.find_or_create_by_sku("DMY" + GlobalData.salor_user.id.to_s + Time.now.strftime("%y%m%d") + rand(999).to_s)
         i.base_price = code
@@ -222,22 +222,22 @@ class Item < ActiveRecord::Base
       return i
     end # end if pm
 
-    item = Item.scopied.find_by_sku(code)
+    item = Item.scopied(emp).find_by_sku(code)
     return item if item
     #We didn't find it, so let's see if we can parse the code.
     m = code.match(/\d{2}(\d{5})(\d{5})/)
-    item = Item.scopied.find_by_sku(m[1]) if m
+    item = Item.scopied(emp).find_by_sku(m[1]) if m
     if item then
       if not item.is_gs1 == true then
         item.update_attribute(:is_gs1, true)
       end
       return item
     end
-    lcard = LoyaltyCard.find_by_sku(code)
+    lcard = LoyaltyCard.scopied(emp).find_by_sku(code)
     return lcard if lcard
     #oops, still haven't found it, let's creat a dummy item
-    i = Item.scopied.find_or_create_by_sku(code)
-    i.vendor_id = $Vendor.id
+    i = Item.scopied(emp).find_or_create_by_sku(code)
+    i.vendor_id = emp.get_meta.vendor_id
     i.make_valid
     return i
   end

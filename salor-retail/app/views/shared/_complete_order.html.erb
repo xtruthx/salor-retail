@@ -20,9 +20,9 @@ var allow_payment_amount = true;
   puts payment_external_types[index] etc.
 */
 // i.e. what needs to be sent in the payment_methods[][internal_type] field
-var payment_internal_types = [<%= raw PaymentMethod.types_list.map {|pm| "'#{pm[1]}'"}.join(',') %>];
+var payment_internal_types = [<%= raw PaymentMethod.types_list(@current_employee).map {|pm| "'#{pm[1]}'"}.join(',') %>];
 // what can be set as the payment_methods[][name] field
-var payment_external_types = [<%= raw PaymentMethod.types_list.map {|pm| "'#{pm[0]}'"}.join(',') %>];
+var payment_external_types = [<%= raw PaymentMethod.types_list(@current_employee).map {|pm| "'#{pm[0]}'"}.join(',') %>];
 
 function payment_method_options() {
   var txt = '';
@@ -134,13 +134,13 @@ function validatePaymentMethod(element) {
   }
 }
 function showOrderTotalOnPoleDisplay() {
-  <% unless $Register.pole_display.nil? or $Register.pole_display.empty? %>
+  <% unless @current_register.pole_display.nil? or @current_register.pole_display.empty? %>
     if (typeof(Salor) != 'undefined') {
       blurb = ('<%= t('activerecord.attributes.total') %>' + '               ').substring(0,10);
       currency = '<%= t('number.currency.format.friendly_unit') %>';
       total = parseFloat(($('#pos_order_total').html()).replace(',','.').substring(1));
       total = sprintf("%s %6.2f", currency, total);
-      Salor.poleDancer('<%= GlobalData.cash_register.pole_display %>', blurb + total );
+      Salor.poleDancer('<%= @current_register.pole_display %>', blurb + total );
     }
   <% end %>
 }
@@ -155,13 +155,13 @@ function complete_order_show() {
   //allow_complete_order(isBuyOrder); // need to get the total money tended > complete_total before active unless this isBuyOrder
   $('#complete_order').show();
 
-  <% unless $Register.pole_display.nil? or $Register.pole_display.empty? %>
+  <% unless @current_register.pole_display.nil? or @current_register.pole_display.empty? %>
     if (typeof(Salor) != 'undefined') {
       blurb = ('<%= t('activerecord.attributes.total') %>' + '               ').substring(0,10);
       currency = '<%= t('number.currency.format.friendly_unit') %>';
       total = parseFloat(($('#pos_order_total').html()).replace(',','.').substring(1));
       total = sprintf("%s %6.2f", currency, total);
-      Salor.poleDancer('<%= GlobalData.cash_register.pole_display %>', blurb + total );
+      Salor.poleDancer('<%= @current_register.pole_display %>', blurb + total );
     }
   <% end %>
   $('.a4-print-button').remove(); 
@@ -185,7 +185,7 @@ function complete_order_show() {
       //if (confirmInactive) {
       //  complete_order_hide();
       //} else {
-        <% if $Register.no_print == true then %>
+        <% if @current_register.no_print == true then %>
           complete_order_send(false);
         <% else %>
           complete_order_send(true);
@@ -446,7 +446,7 @@ function complete_order_send(print) {
 }
 
 function displayChangeToCustomer() {
-  <% unless GlobalData.cash_register.pole_display.nil? or GlobalData.cash_register.pole_display.empty? %>
+  <% unless @current_register.pole_display.nil? or @current_register.pole_display.empty? %>
     if (typeof(Salor) != 'undefined') {
       currency = '<%= t('number.currency.format.friendly_unit') %>';
       given = parseFloat(get_payment_total());
@@ -455,7 +455,7 @@ function displayChangeToCustomer() {
       change = sprintf(" %s %6.2f", currency, change);
       blurb_line1 = ('<%= t('views.given') %>' + '       ').substring(0,9);
       blurb_line2 = ('<%= t('views.change') %>' + '       ').substring(0,9);
-      Salor.poleDancer('<%= GlobalData.cash_register.pole_display %>', blurb_line1 + given + blurb_line2 + change );
+      Salor.poleDancer('<%= @current_register.pole_display %>', blurb_line1 + given + blurb_line2 + change );
     }
   <% end %>
 }

@@ -12,7 +12,7 @@ class TransactionTagsController < ApplicationController
   # GET /transaction_tags
   # GET /transaction_tags.xml
   def index
-    @transaction_tags = TransactionTag.scopied.all
+    @transaction_tags = TransactionTag.scopied(@current_employee).all
 
     respond_to do |format|
       format.html # index.html.erb
@@ -23,7 +23,7 @@ class TransactionTagsController < ApplicationController
   # GET /transaction_tags/1
   # GET /transaction_tags/1.xml
   def show
-    @transaction_tag = TransactionTag.scopied.find(params[:id])
+    @transaction_tag = TransactionTag.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       format.html # show.html.erb
@@ -44,7 +44,7 @@ class TransactionTagsController < ApplicationController
 
   # GET /transaction_tags/1/edit
   def edit
-    @transaction_tag = TransactionTag.scopied.find(params[:id])
+    @transaction_tag = TransactionTag.scopied(@current_employee).find(params[:id])
   end
 
   # POST /transaction_tags
@@ -67,7 +67,7 @@ class TransactionTagsController < ApplicationController
   # PUT /transaction_tags/1
   # PUT /transaction_tags/1.xml
   def update
-    @transaction_tag = TransactionTag.scopied.find(params[:id])
+    @transaction_tag = TransactionTag.scopied(@current_employee).find(params[:id])
 
     respond_to do |format|
       if @transaction_tag.update_attributes(params[:transaction_tag])
@@ -84,7 +84,7 @@ class TransactionTagsController < ApplicationController
   # DELETE /transaction_tags/1
   # DELETE /transaction_tags/1.xml
   def destroy
-    @transaction_tag = TransactionTag.scopied.find(params[:id])
+    @transaction_tag = TransactionTag.scopied(@current_employee).find(params[:id])
     @transaction_tag.kill
     atomize(ISDIR, 'cash_drop')
     respond_to do |format|
@@ -94,14 +94,13 @@ class TransactionTagsController < ApplicationController
   end
 
   def logo
-    @transaction_tag = TransactionTag.scopied.find(params[:id])
+    @transaction_tag = TransactionTag.scopied(@current_employee).find(params[:id])
     send_data @transaction_tag.logo_image, :type => @transaction_tag.logo_image_content_type, :disposition => 'inline'
   end
 
   private 
   def crumble
-    @vendor = GlobalData.salor_user.get_vendor(GlobalData.salor_user.meta.vendor_id)
-    add_breadcrumb @vendor.name,'vendor_path(@vendor)'
+    add_breadcrumb @current_vendor.name,'vendor_path(@current_vendor)'
     add_breadcrumb I18n.t("menu.transaction_tags"),'transaction_tags_path(:vendor_id => params[:vendor_id])'
   end
 end
