@@ -504,7 +504,7 @@ module UserEmployeeMethods
           else
             paymentmethods[:refund][ptype] += p.amount
           end
-        elsif p.internal_type == 'InCash'
+        elsif p.internal_type == 'InCash' or p.internal_type == 'Change'
           #ignore those. cash will be calculated as difference between category sum and other normal payment methods
         else
           if p.amount > 0
