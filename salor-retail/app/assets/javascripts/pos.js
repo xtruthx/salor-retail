@@ -1,6 +1,14 @@
 /*
   All POS Screen functionality is through here now.
  */
+var IS = {
+  giftCard: function (order_item) {
+    return (order_item.behavior == 'gift_card');
+  },
+  activated: function (order_item) {
+    return (IS.giftCard(order_item) && order_item.activated == true);
+  }
+}
 var POS = function () {
   var self = this;
   this.pos_container = null;
@@ -43,17 +51,21 @@ var POS = function () {
   this.drawOrderItemsContainer = function () {
     var oic = shared.element("div",{id: "order_items_container"},'',self.pos_container);
     self.order_items_container = oic;
-    oic.width(self.pos_container.width() * 0.75);
+    oic.width(self.pos_container.width() * 0.70);
     oic.height(self.pos_container.height() * 0.95);  
   }
   this.drawControlPanel = function () {
     var cp = shared.element("div",{id: "pos_control_panel"},'',self.pos_container);
     var off = self.order_items_container.offset();
     var w = self.order_items_container.outerWidth() + 10;
-    cp.offset({left:off.left + w, top: off.top});
-    cp.width(self.pos_container.width() * 0.24);
+    cp.offset({left:off.left + w, top: off.top - 13});
+    cp.width(self.pos_container.width() * 0.25);
     cp.height(self.pos_container.height() * 0.95);
     self.control_panel = cp;
+    var h3 = shared.element('h3',{},i18n.activerecord.attributes.total,self.control_panel);
+    h3.outerWidth(cp.outerWidth() - 20);
+    var hr = shared.element('hr',{},'',self.control_panel);
+    hr.outerWidth(cp.outerWidth() - 20);
     var t = shared.element('div', {id: 'order_total'},toCurrency(Order.total),cp);
     t.outerWidth(cp.outerWidth() - 20);
     var change = shared.element('div', {id: 'order_change'},toCurrency(0),cp);
@@ -75,7 +87,12 @@ var POS = function () {
         $('#recalc_change').html( toCurrency( Round(toFloat($(this).val()) - _get('order_total',$(this)),2) ) );
       });
     });
-    var inp = shared.element('input',{id: 'pos_sku_input'},'',cp);
+    
+    var cp_buttons = shared.element('div',{id: 'pos_cp_buttons'},'',cp);
+    cp_buttons.outerWidth(cp.outerWidth() - 20);
+    shared.element('h3',{},i18n.activerecord.attributes.sku,cp_buttons);
+    shared.element('hr',{},'',cp_buttons);
+    var inp = shared.element('input',{id: 'pos_sku_input'},'',cp_buttons);
     inp.outerWidth(cp.outerWidth() - 20);
     inp.keypress(function (event) {
       if (event.which == '13' && !event.shiftKey) {
@@ -85,9 +102,8 @@ var POS = function () {
     inp.focus(function () {
       self.dont_focus_sku_input = false;
     })
-    var cp_buttons = shared.element('div',{id: 'pos_cp_buttons'},'',cp);
-    cp_buttons.outerWidth(cp.outerWidth() - 20);
-    
+    shared.element('h3',{},i18n.activerecord.models.payment_method.other,cp_buttons);
+    shared.element('hr',{},'',cp_buttons);
     for (var i = 0; i < PaymentMethods.length; i++) {
       var pm = PaymentMethods[i];
       var complete_in_x = shared.element('div',{id: 'complete_in_' + pm.internal_type},pm.name,cp_buttons);
@@ -108,13 +124,19 @@ var POS = function () {
           $('#pos_sku_input').val('');
           $(this).html(_get('payment_method',$(this)).name);
           Order.payment_methods = self.collectPms(); // i.e. return the pms, not the pm_ttl
-          console.log("Order.payment_methods = ",Order.payment_methods);
           self.saveOrder(true);
           return;
         }
         self.completeOrder($(this));
       });
     }
+    shared.element('hr',{},'',cp_buttons);
+    var save_order = shared.element('div',{id: 'save_button'},i18n.helpers.submit.save,cp_buttons);
+    save_order.addClass('new-pos-button');
+    save_order.outerWidth(cp_buttons.width() - 5);
+    save_order.mousedown(function () {
+      self.saveOrder(true);
+    });
   }
   this.drawOrder = function (o) {
     var change = 0;
@@ -152,7 +174,9 @@ var POS = function () {
       return;
     }
     self.order_items_container.html('');
-    for (var index = 0; index < order_items.length; index++) {
+    shared.element('h3',{},i18n.activerecord.models.order_item.other,self.order_items_container);
+    shared.element('hr',{},'',self.order_items_container);
+    for (var index = order_items.length-1; index >=0; index--) {
       var order_item = order_items[index];
       order_item.index = index
       if (order_item.hidden != 1) {
@@ -216,6 +240,9 @@ var POS = function () {
     price.addClass('table-column table-cell pos-item-attr pos-item-price pointer no-select');
     price.unbind();
     price.mousedown(function () {
+      if (IS.giftCard(order_item)) {
+        return;
+      }
       self.dont_focus_sku_input = true;
       var order_item = _get('item',$(this).parent());
       //because order_item is an object it is a pointer!
@@ -230,14 +257,12 @@ var POS = function () {
         order_item.price = $(this).val(); // remember, order_item is a pointer
         self.updateOrderItemTotal(order_item);
         if (event.which == '13' && !event.shiftKey) {
-          console.log('input enter for price');
           $(this).remove();
           self.dont_focus_sku_input = false;
         }
         price.html(toCurrency(order_item.price));
       });
       inp.blur(function () {
-        console.log('price blurred');
         order_item.price = $(this).val();
         price.html(toCurrency($(this).val()))
         self.updateOrderItemTotal(order_item);
@@ -254,6 +279,9 @@ var POS = function () {
     rebate.addClass('table-column table-cell pos-item-attr pos-item-rebate pointer no-select');
     rebate.unbind();
     rebate.mousedown(function () {
+      if (IS.giftCard(order_item)) {
+        return;
+      }
       self.dont_focus_sku_input = true;
       var order_item = _get('item',$(this).parent());
       //because order_item is an object it is a pointer!
@@ -268,14 +296,12 @@ var POS = function () {
         order_item.rebate = $(this).val(); // remember, order_item is a pointer
         self.updateOrderItemTotal(order_item);
         if (event.which == '13' && !event.shiftKey) {
-          console.log('input enter for rebate');
           $(this).remove();
           self.dont_focus_sku_input = false;
         }
         rebate.html(toPercent(order_item.rebate));
       });
       inp.blur(function () {
-        console.log('rebate blurred');
         order_item.rebate = $(this).val();
         rebate.html(toPercent($(this).val()))
         self.updateOrderItemTotal(order_item);
@@ -289,9 +315,7 @@ var POS = function () {
     }); // end rebate.onmousedown
     
     if ((order_item.must_change_price == true && order_item.price == 0) && !$('.floating-input').is(":visible")) {
-      console.log('setting mcp timeout');
       setTimeout(function () {
-        console.log('triggering price');
         price.trigger('mousedown');
       },100);
     }
@@ -316,7 +340,6 @@ var POS = function () {
         order_item.rebate = 0;
         var percentage = total_2_discount / order_item.total;
         order_item.rebate = percentage * 100;
-        console.log(num_of_discountables,total_2_discount,percentage,order_item.rebate);
       }
     });
     order_item.total = Round(order_item.total - (order_item.total * (order_item.rebate/100)),2);
@@ -334,9 +357,7 @@ var POS = function () {
     _set('order_dirty',true);
   } //end updateOrderItemTotal
   this.saveOrder = function (saveonly) {
-    console.log("Save called with ",saveonly);
     if (saveonly) {
-      console.log("saving: ", Order);
       $.post('/orders/new_pos_complete?save=true', {order: Order}, function () {
         _set('order_dirty',true);
       });
@@ -356,7 +377,6 @@ var POS = function () {
         pms.push(npm)
       }
     });
-    console.log("collect pms",pms);
     return pms;
   }
   this.collectPmsTotal = function () {
@@ -372,7 +392,6 @@ var POS = function () {
   }
   this.completeOrder = function (sender) {
     var pm = _get('payment_method',sender);
-    console.log("completing order",pm.internal_type,$('#pos_sku_input').val(),Order.total);
     var amount = toFloat($('#pos_sku_input').val());
     $('#pos_sku_input').val('');
     if (amount > 0) {
@@ -382,7 +401,6 @@ var POS = function () {
     var pms = self.collectPms();
     var pm_ttl = self.collectPmsTotal();
     
-    console.log('pms.length',pms.length);
     if (pms.length == 0) {
       var npm = {name: pm.name, internal_type: pm.internal_type, amount: Order.total}
       pms.push(npm);
@@ -390,7 +408,6 @@ var POS = function () {
       pm_ttl = Order.total;
     }
     Order.payment_methods = pms;
-    console.log("amount",amount,"total",Order.total);
     if ((amount == 0 && pm_ttl >= Order.total) || (pm_ttl >= Order.total)) {
       self.saveOrder(false);
     } else {

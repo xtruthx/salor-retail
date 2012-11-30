@@ -725,7 +725,7 @@ class OrderItem < ActiveRecord::Base
         :sku => self.item.sku,
         :item_id => self.item_id,
         :activated => self.item.activated,
-        :amount_remaining => self.item.amount_remaining,
+        :amount_remaining => self.amount_remaining,
         :coupon_type => self.item.coupon_type,
         :quantity => self.quantity,
         :price => self.price.round(2),
