@@ -18,7 +18,7 @@ class ItemsController < ApplicationController
     @order_item.set_item2(item)
     @order_item.actions = item.actions
     @order_item.parts = item.parts
-    render :json => @order_item
+    render :json => @order_item.to_json
   end
   # GET /items
   # GET /items.xml

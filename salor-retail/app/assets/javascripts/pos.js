@@ -19,7 +19,6 @@ var POS = function () {
     self.pos_container.height($(window).height() - (self.pos_container.offset().top + 20));
     self.drawOrderItemsContainer();
     self.drawControlPanel();
-    self.drawOrderItems(Order.order_items);
     _set('order_dirty',true);
     setInterval(function () {
       if ( (
@@ -31,9 +30,8 @@ var POS = function () {
               !$('.ui-keyboard').is(":visible") && 
               !$('.salor-dialog').is(":visible") &&
               !$('.floating-input').is(":visible")
-            ) ||
+            ) &&
         self.dont_focus_sku_input == false ) {
-        console.log('focusing input');
           focusInput($("#pos_sku_input"));
         } 
         if (_get('order_dirty')) {
@@ -65,15 +63,15 @@ var POS = function () {
       shared.helpers.center(dlg);
       shared.helpers.position_rememberable(dlg);
       var ttl = shared.element( 'div', {}, toCurrency( _get('order_total_was',$(this)) ) ,dlg);
-      ttl.addClass('total');
+      ttl.addClass('pos-total');
       var ch = shared.element('div',{id: 'recalc_change'}, toCurrency( Round(_get('pm_ttl',$(this)) - _get('order_total_was',$(this)),2) ),dlg);
-      ch.addClass('change');
+      ch.addClass('pos-change');
       var inp = shared.element('input',{},'',dlg);
       inp.addClass('raised-input');
+      // we have to focus on timeouts because the js code completes before the interface has drawn the element
       setTimeout(function () { inp.focus(); inp.select();},100);
       _set('order_total',_get('order_total_was',$(this)),inp );
       inp.keyup(function () {
-        console.log('ttl_was',_get('order_total',$(this)));
         $('#recalc_change').html( toCurrency( Round(toFloat($(this).val()) - _get('order_total',$(this)),2) ) );
       });
     });
@@ -104,6 +102,16 @@ var POS = function () {
       }
       _set('payment_method',pm,complete_in_x);
       complete_in_x.mousedown(function () {
+        var code = $('#pos_sku_input').val();
+        if (code == '-') {
+          _set('amount',0,$(this));
+          $('#pos_sku_input').val('');
+          $(this).html(_get('payment_method',$(this)).name);
+          Order.payment_methods = self.collectPms(); // i.e. return the pms, not the pm_ttl
+          console.log("Order.payment_methods = ",Order.payment_methods);
+          self.saveOrder(true);
+          return;
+        }
         self.completeOrder($(this));
       });
     }
@@ -114,6 +122,7 @@ var POS = function () {
     $.each($('.payment-method'),function (k,v) {
       var pm = _get('payment_method',$(v));
       $(v).html(pm.name);
+      
     });
     $.each(o.payment_methods, function (k,v) {
       var id = '#complete_in_' + v.internal_type;
@@ -125,15 +134,17 @@ var POS = function () {
       }
     });
     $('#order_total').html(toCurrency(Order.total));
+    // we don't want to update the change until we've added new items,
+    // this way, the change on the last order is still shown after
+    // complete.
     if (Order.order_items.length > 0) {
       $('#order_change').html(toCurrency(Round(pm_ttl - Order.total,2)));
-      console.log('setting order_total_was');
       _set('order_total_was',Order.total,$('#order_change'));
       _set('order_id_was',Order.id,$('#order_change'));
       _set('pm_ttl',pm_ttl,$('#order_change'));
     }
     self.drawOrderItems(Order.order_items);
-    _set('order_dirty',false);
+    _set('order_dirty',false); // when we do something to the order, need to set it dirty
   }
   /* OrderItem work */
   this.drawOrderItems = function (order_items) {
@@ -238,6 +249,45 @@ var POS = function () {
         inp.select();
       },100);
     }); // end price.onmousedown
+    
+    var rebate = shared.element('div',{id: id + '_rebate' },toPercent(order_item.rebate),row); 
+    rebate.addClass('table-column table-cell pos-item-attr pos-item-rebate pointer no-select');
+    rebate.unbind();
+    rebate.mousedown(function () {
+      self.dont_focus_sku_input = true;
+      var order_item = _get('item',$(this).parent());
+      //because order_item is an object it is a pointer!
+      var inp = shared.element('input',{id: 'rebate_input_' + id},'',self.order_items_container);
+      inp.val(order_item.rebate);
+      inp.addClass('floating-input');
+      inp.css({position: 'absolute'});
+      inp.offset(rebate.offset());
+      inp.width(rebate.outerWidth() - 10);
+      inp.height(rebate.outerHeight() - 4);
+      inp.on('keyup',function (event) {
+        order_item.rebate = $(this).val(); // remember, order_item is a pointer
+        self.updateOrderItemTotal(order_item);
+        if (event.which == '13' && !event.shiftKey) {
+          console.log('input enter for rebate');
+          $(this).remove();
+          self.dont_focus_sku_input = false;
+        }
+        rebate.html(toPercent(order_item.rebate));
+      });
+      inp.blur(function () {
+        console.log('rebate blurred');
+        order_item.rebate = $(this).val();
+        rebate.html(toPercent($(this).val()))
+        self.updateOrderItemTotal(order_item);
+        $(this).remove();
+        self.dont_focus_sku_input = false;
+      });
+      setTimeout(function () {
+        inp.focus();
+        inp.select();
+      },100);
+    }); // end rebate.onmousedown
+    
     if ((order_item.must_change_price == true && order_item.price == 0) && !$('.floating-input').is(":visible")) {
       console.log('setting mcp timeout');
       setTimeout(function () {
@@ -258,7 +308,19 @@ var POS = function () {
     if (order_item.is_buyback == true && order_item.price > 0) {
       order_item.price *= -1;
     }
-    order_item.total = order_item.price * order_item.quantity;
+    order_item.total = Round(order_item.price * order_item.quantity,2);
+    $.each(order_item.actions,function (k,action){
+      if (action.behavior == "discount_after_threshold") {
+        var num_of_discountables = Math.floor(order_item.quantity / action.value2);
+        var total_2_discount = num_of_discountables * order_item.price;
+        order_item.rebate = 0;
+        var percentage = total_2_discount / order_item.total;
+        order_item.rebate = percentage * 100;
+        console.log(num_of_discountables,total_2_discount,percentage,order_item.rebate);
+      }
+    });
+    order_item.total = Round(order_item.total - (order_item.total * (order_item.rebate/100)),2);
+    
     
     $(id).html(toCurrency(order_item.total)); 
     var ttl = 0.0;
@@ -274,6 +336,7 @@ var POS = function () {
   this.saveOrder = function (saveonly) {
     console.log("Save called with ",saveonly);
     if (saveonly) {
+      console.log("saving: ", Order);
       $.post('/orders/new_pos_complete?save=true', {order: Order}, function () {
         _set('order_dirty',true);
       });
@@ -282,6 +345,30 @@ var POS = function () {
         _set('order_dirty',true);
       });
     }
+  }
+  this.collectPms = function (onlyttl) {
+    var pms = [];
+    $.each($('.payment-method'), function (k,v) {
+      var pm = _get('payment_method',$(v));
+      var amnt = _get('amount',$(v));
+      if (amnt && amnt > 0) {
+        var npm = {name: pm.name, internal_type: pm.internal_type, amount: amnt}
+        pms.push(npm)
+      }
+    });
+    console.log("collect pms",pms);
+    return pms;
+  }
+  this.collectPmsTotal = function () {
+    var pm_ttl = 0;
+    $.each($('.payment-method'), function (k,v) {
+      var pm = _get('payment_method',$(v));
+      var amnt = _get('amount',$(v));
+      if (amnt && amnt > 0) {
+        pm_ttl = pm_ttl + amnt;
+      }
+    });
+    return pm_ttl;
   }
   this.completeOrder = function (sender) {
     var pm = _get('payment_method',sender);
@@ -292,17 +379,9 @@ var POS = function () {
       sender.html(pm.name + " " + toCurrency(amount));
       _set('amount',amount,sender); // we'll need to clear these later
     }
-    var pms = [];
-    var pm_ttl = 0;
-    $.each($('.payment-method'), function (k,v) {
-      var pm = _get('payment_method',$(v));
-      var amnt = _get('amount',$(v));
-      if (amnt && amnt > 0) {
-        var npm = {name: pm.name, internal_type: pm.internal_type, amount: amnt}
-        pms.push(npm)
-        pm_ttl = pm_ttl + amnt;
-      }
-    });
+    var pms = self.collectPms();
+    var pm_ttl = self.collectPmsTotal();
+    
     console.log('pms.length',pms.length);
     if (pms.length == 0) {
       var npm = {name: pm.name, internal_type: pm.internal_type, amount: Order.total}
