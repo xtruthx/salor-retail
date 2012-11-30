@@ -69,7 +69,7 @@
   </tr>
 
   <% purchase_price_total = 0 %>
-  <% @shipment.shipment_items.scopied.each do |sitem|  %>
+  <% @shipment.shipment_items.each do |sitem|  %>
     <% item = Item.scopied.find_by_sku(sitem.sku) %>
     <tr>
       <td valign="middle">

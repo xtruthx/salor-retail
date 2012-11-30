@@ -20,9 +20,22 @@ function clickBuyOrderButton(id) {
   get('/vendors/toggle?ajax=true&klass=Order&field=toggle_buy_order&model_id=' + id, 'pos/menu');
   //focusInput($('.void-order-input'));
 }
+function showLastFiveOrders() {
+  var d = $('.last-five-orders');
+  d.show();
+  d.css({'z-index': 1001});
+}
+function getNewOrder() {
+  if ($pos) {
+    $pos.saveOrder(true);
+    get('/orders/new_order_ajax', '_menu.html.erb')
+  } else {
+    get('/orders/new_order_ajax', '_menu.html.erb')
+  }
+}
 </script>
 <div class="pos-menu">
-        <div id="new_order_button" onmousedown="get('/orders/new_order_ajax', '_menu.html.erb')" class="input pos-button new-order">
+        <div id="new_order_button" onmousedown="getNewOrder();" class="input pos-button new-order">
           <%= t("menu.new_order")%>
         </div>
         <div id="clear_button" onmousedown="clearOrder();" class="input pos-button pos-configuration" style="width: 3%;background-color: red;">
@@ -34,7 +47,7 @@ function clickBuyOrderButton(id) {
         <div id="configuration_button" onmousedown="showOrderOptions();" class="input pos-button pos-configuration">
           <%= t("menu.configuration")%>
         </div> 
-        <div id="show_customers" onmousedown="$('.last-five-orders').show();" class="input pos-button">
+        <div id="show_customers" onmousedown="showLastFiveOrders();" class="input pos-button">
           <%= t("activerecord.models.customer.other")%>
         </div>
         <div id="show_butons" onmousedown="$('#buttons').show();" class="input pos-button">

@@ -9,7 +9,7 @@
   %>
   <div location="/orders/<%= order.id %>/edit" 
          class="last-five-order pointer last-five-orders-<%= i %> <%= 'selected' if order.id == GlobalData.salor_user.meta.order_id %>" 
-         onmousedown="window.location = '/orders/<%= order.id %>/edit';"
+         onmousedown="window.location = '?order_id=<%= order.id %>';"
           style="background-color: <%= color %>;"
          >
     <%= image_tag('/images/icons/' + icon(:order,32)) %><br />

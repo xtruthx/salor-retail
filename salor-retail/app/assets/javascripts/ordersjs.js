@@ -18,9 +18,14 @@ function add_item(sku, additional_params) {
     window.location = "/employees/login?" + p.join("&");
     return;
   }
-  var user_line = "&user_id=" + User.id + "&user_type=" + User.type;
-  get('/orders/add_item_ajax?order_id=' + Order.id + '&sku=' + sku + user_line + additional_params, filename);
-  $('#keyboard_input').val('');
+  if ($pos == null) {
+    var user_line = "&user_id=" + User.id + "&user_type=" + User.type;
+    get('/orders/add_item_ajax?order_id=' + Order.id + '&sku=' + sku + user_line + additional_params, filename);
+    $('#keyboard_input').val('');
+  } else {
+    console.log("new pos find");
+    $pos.findItem(sku);
+  }
 }
 
 function void_item(id) {

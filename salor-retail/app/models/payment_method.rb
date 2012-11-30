@@ -41,7 +41,7 @@ class PaymentMethod < ActiveRecord::Base
     pmi = I18n.t("system.payment_internal_types").split(',')
     i = 0
     pmi.each do |p|
-      if p == self.internal_type then
+      if p == self.internal_type and self.name.empty? then
         self.name = pmx[i]
       end
       i = i + 1

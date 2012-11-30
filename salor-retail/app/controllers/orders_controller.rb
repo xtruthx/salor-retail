@@ -36,8 +36,54 @@ class OrdersController < ApplicationController
 #         format.xml  { render :xml => @order }
 #       end
 #    end
-
-   
+  def new_pos_complete
+    @order = initialize_order
+    params[:order].delete(:sale_type);
+    params[:order].delete(:origin);
+    params[:order].delete(:destination);
+    params[:order][:order_items].each do |oi|
+      if oi[1]['id'] != 'null' then
+        order_item = @order.order_items.find(oi[1]['id'])
+        order_item.vendor_id = @order.vendor_id
+        order_item.update_attributes(oi[1])
+      else
+        order_item = OrderItem.new(oi[1])
+        order_item.vendor_id = @order.vendor_id
+        @order.order_items << order_item
+      end
+    end
+    params[:order].delete(:order_items);
+    @order.payment_methods.clear
+    params[:order][:payment_methods].each do |pm|
+      npm = pm[1]
+      opm = PaymentMethod.new(npm)
+      opm.vendor_id = @order.vendor_id
+      @order.payment_methods << opm
+    end
+    params[:order].delete(:payment_methods);
+    @order.update_attributes(params[:order])
+    if not params[:save] then
+      @order.complete
+      @order = $User.get_new_order
+    end
+  end
+  def new_pos_interface
+    if not salor_user or not salor_user.meta.vendor_id then
+      redirect_to :controller => 'vendors', :notice => I18n.t("system.errors.must_choose_vendor") and return
+    end
+    if not salor_user.meta.cash_register_id then
+      redirect_to :controller => 'cash_registers', :notice => I18n.t("system.errors.must_choose_register") and return
+    end
+    
+    @order = initialize_order
+    if @order.paid == 1 and not $User.is_technician? then
+      @order = $User.get_new_order
+    end
+    if @order.order_items.visible.any? then
+      @order.update_self_and_save
+    end
+    @button_categories = Category.where(:button_category => true).order(:position)
+  end
   def new_from_proforma
     @proforma = Order.scopied.find_by_id(params[:order_id]) #initialize_order
     @order = Order.new
@@ -87,9 +133,7 @@ class OrdersController < ApplicationController
     if not salor_user.meta.cash_register_id then
       redirect_to :controller => 'cash_registers', :notice => I18n.t("system.errors.must_choose_register") and return
     end
-    
-    $User.auto_drop
-    
+      
     @order = initialize_order
     if @order.paid == 1 and not $User.is_technician? then
       @order = $User.get_new_order

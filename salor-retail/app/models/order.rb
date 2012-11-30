@@ -304,7 +304,7 @@ class Order < ActiveRecord::Base
 	end
 	#
 	def calculate_totals(speedy = false)
-#     puts "## Calculate_Totals called #{speedy}"
+     puts "## Calculate_Totals called #{speedy}"
 	  if self.paid == 1 and not $User.is_technician? then
 	    #GlobalErrors.append("system.errors.cannot_edit_completed_order",self)
 	    return
@@ -315,7 +315,7 @@ class Order < ActiveRecord::Base
       self.total = 0 unless self.total_is_locked and not self.total.nil?
       self.subtotal = 0 unless self.subtotal_is_locked and not self.subtotal.nil?
       self.tax = 0 unless self.tax_is_locked and not self.tax.nil?
-      self.order_items.visible.reload.order("id ASC").each do |oi|
+      self.order_items.visible.order("id ASC").each do |oi|
         if oi.item.nil? then
           remove_order_item(oi)
           next
@@ -327,9 +327,9 @@ class Order < ActiveRecord::Base
           oi.update_attribute :is_buyback, false
         end
         # Coupons are not handled here, they are handled at the end of the order.
-        if oi.item_type.behavior == 'normal' or oi.item_type.behavior == 'gift_card' then
+        if oi.behavior == 'normal' or oi.behavior == 'gift_card' then
           price = oi.calculate_total self.subtotal
-          puts "price from #{oi.item.sku} is #{price}"
+#           puts "price from #{oi.item.sku} is #{price}"
           if oi.is_buyback and not self.buy_order then
             if price > 0 then
               oi.update_attribute(:price, price * -1)
@@ -338,13 +338,13 @@ class Order < ActiveRecord::Base
               self.subtotal = self.subtotal + price  
             end
           else
-            if oi.behavior == 'gift_card' and oi.item.activated then
+            if oi.behavior == 'gift_card' and oi.activated then
               self.subtotal = self.subtotal - oi.price
             else
               b = self.subtotal
               self.subtotal = self.subtotal + price
               a = self.subtotal
-              puts "Check:  #{b} + #{price} = #{a}"
+#               puts "Check:  #{b} + #{price} = #{a}"
             end
           end
           # regular items are never activated, 
@@ -438,7 +438,7 @@ class Order < ActiveRecord::Base
   #
   def gross
     refunded_ttl = self.order_items.where("order_id = #{self.id} and behavior != 'coupon' and is_buyback is false and activated is false and refunded is TRUE").sum(:total).round(2)
-    if $Conf.calculate_tax then
+    if $Conf and $Conf.calculate_tax then
       taxttl = self.order_items.visible.where("order_id = #{self.id} and behavior != 'coupon' and is_buyback is false and activated is false and refunded is FALSE").sum(:tax).round(2)
       if self.tax_free then
         taxttl = 0
@@ -455,7 +455,7 @@ class Order < ActiveRecord::Base
 	  amnt = 0.0
 	  if self.subtotal.nil? then self.subtotal = 0 end
     self.order_items.visible.each do |oi|
-      puts "!! Oi.total is #{oi.total}"
+#       puts "!! Oi.total is #{oi.total}"
       amnt += (oi.total * (self.rebate/100))
     end
     #amnt = (self.subtotal * (self.rebate/100)) #if self.rebate_type == 'percent'
@@ -569,7 +569,7 @@ class Order < ActiveRecord::Base
       log_action"## not oi, returning"
       return false 
     end
-    if not oi.item.activated then
+    if not oi.activated then
       log_action "Setting activated..."
       oi.item.update_attribute(:activated,true)
       oi.item.update_attribute(:amount_remaining, oi.item.base_price)
@@ -656,7 +656,6 @@ class Order < ActiveRecord::Base
     t -= self.calculate_rebate
     return t
   end
-
   def to_json
     self.total = 0 if self.total.nil?
     attrs = {
@@ -674,7 +673,9 @@ class Order < ActiveRecord::Base
       :sale_type  => self.sale_type,
       :origin => self.origin_country,
       :destination => self.destination_country,
-      :is_proforma => self.is_proforma
+      :is_proforma => self.is_proforma,
+      :order_items => self.order_items.visible,
+      :payment_methods => self.payment_methods
     }
     if self.customer then
       attrs[:customer] = self.customer.json_attrs

@@ -111,11 +111,15 @@ var inplace_shipmentstatuses = "<%= escape_javascript raw inplace_shipmentstatus
 var inplace_rebatetypes = "<%= escape_javascript raw inplace_rebatetypes %>";
 var SaleTypes = <%= raw SaleType.scopied.to_json %>;
 var Countries = <%= raw Country.scopied.to_json %>;
-
+var PaymentMethods = <%= raw TenderMethod.scopied.all.to_json %>;
 
 window.params = {
   action: "<%= params[:action] %>",
   controller: "<%= params[:controller] %>",
   user: { name: "<%= salor_user.username if salor_user %>" }
 };
+<% if @order %>
+Order = <%= raw @order.to_json %>
+<% end %>
+var $pos = null; // this will not be null when using the new pos interface
 </script>
