@@ -532,7 +532,12 @@ class Order < ActiveRecord::Base
   def activate_gift_cards
     self.gift_cards.each do |gc|
       if gc.item.activated then
-        gc.item.amount_remaining -= gc.price
+        if gc.price < 0 then
+          gc.item.amount_remaining += gc.price
+        else
+          gc.item.amount_remaining -= gc.price
+        end
+        
         gc.item.amount_remaining = 0 if gc.item.amount_remaining < 0
         gc.item.save
       else

@@ -7,6 +7,9 @@ var IS = {
   },
   activated: function (order_item) {
     return (IS.giftCard(order_item) && order_item.activated == true);
+  },
+  normal: function (order_item) {
+    return (!IS.activated(order_item) && order_item.behavior == 'normal' );
   }
 }
 var POS = function () {
@@ -138,7 +141,7 @@ var POS = function () {
       self.saveOrder(true);
     });
   }
-  this.drawOrder = function (o) {
+  this.drawOrderTotal = function (o) {
     var change = 0;
     var pm_ttl = 0;
     $.each($('.payment-method'),function (k,v) {
@@ -165,6 +168,9 @@ var POS = function () {
       _set('order_id_was',Order.id,$('#order_change'));
       _set('pm_ttl',pm_ttl,$('#order_change'));
     }
+  }
+  this.drawOrder = function (o) {
+    self.drawOrderTotal(o);
     self.drawOrderItems(Order.order_items);
     _set('order_dirty',false); // when we do something to the order, need to set it dirty
   }
@@ -181,14 +187,15 @@ var POS = function () {
       order_item.index = index
       if (order_item.hidden != 1) {
         self.drawOrderItem(order_item,index);
+        self.updateOrderItemTotal(order_item);
       }
     }
   }
   this.drawOrderItem = function (order_item,index) {
     var id = "order_item_" + index;
-    self.updateOrderItemTotal(order_item);
     var row = shared.element("div",{id: id},'',self.order_items_container);
     _set('item',order_item,row);
+    console.log("drawing",order_item);
     var name = shared.element('div',{id: id + '_name'},order_item.name,row); 
     name.addClass('table-column table-cell pos-item-attr pos-item-name pointer no-select');
     name.unbind();
@@ -196,14 +203,19 @@ var POS = function () {
         self.dont_focus_sku_input = true;
         self.detailedOrderItemMenu(event);
     });
+    name.html(order_item.name);
     
     var quantity = shared.element('div',{id: id + '_quantity' },order_item.quantity,row); 
+    quantity.html(order_item.quantity);
     quantity.addClass('table-column table-cell pos-item-attr pos-item-price pointer no-select');
     quantity.unbind();
     
     quantity.mousedown(function () {
-      self.dont_focus_sku_input = true;
       var order_item = _get('item',$(this).parent());
+      if (IS.activated(order_item)) {
+        return;
+      }
+      self.dont_focus_sku_input = true;
       //because order_item is an object it is a pointer!
       var inp = shared.element('input',{id: 'quantity_input_' + id},'',self.order_items_container);
       inp.val(order_item.quantity);
@@ -237,14 +249,16 @@ var POS = function () {
     }); // end quantity.onmousedown
     
     var price = shared.element('div',{id: id + '_price' },toCurrency(order_item.price),row); 
+    price.html(order_item.price); // because we fetch existing elements.
     price.addClass('table-column table-cell pos-item-attr pos-item-price pointer no-select');
     price.unbind();
     price.mousedown(function () {
+      var order_item = _get('item',$(this).parent());
       if (IS.giftCard(order_item)) {
         return;
       }
       self.dont_focus_sku_input = true;
-      var order_item = _get('item',$(this).parent());
+      
       //because order_item is an object it is a pointer!
       var inp = shared.element('input',{id: 'price_input_' + id},'',self.order_items_container);
       inp.val(order_item.price);
@@ -276,9 +290,11 @@ var POS = function () {
     }); // end price.onmousedown
     
     var rebate = shared.element('div',{id: id + '_rebate' },toPercent(order_item.rebate),row); 
+    rebate.html(toPercent(order_item.rebate));
     rebate.addClass('table-column table-cell pos-item-attr pos-item-rebate pointer no-select');
     rebate.unbind();
     rebate.mousedown(function () {
+      var order_item = _get('item',$(this).parent());
       if (IS.giftCard(order_item)) {
         return;
       }
@@ -321,13 +337,42 @@ var POS = function () {
     }
     
     var total = shared.element('div',{id: id + '_total' },toCurrency(order_item.total),row); 
+    total.html(order_item.total);
     total.addClass('table-column table-cell pos-item-attr pos-item-total pointer no-select');
     if (order_item.is_buyback == true) {
       total.addClass('pos-highlight');
     }
     
   } // end this.drawOrderItem
+  this.tallyNormalItems = function (order) {
+    var ttl = 0;
+    $.each(order.order_items,function (k,order_item) {
+      if (IS.normal(order_item)) {
+        ttl += order_item.total;
+      }
+    });
+    console.log('normal tally is',ttl);
+    return ttl;
+  }
+  this.updateNonNormal = function (order_item) {
+    var ttl = self.tallyNormalItems(Order);
+    if (order_item.amount_remaining > ttl) {
+      order_item.price = ttl * -1;
+    } else {
+      order_item.price = order_item.amount_remaining * -1;
+    }
+    order_item.total = order_item.price;
+    self.drawOrderItem(order_item,order_item.index);
+    Order.total = ttl + order_item.total;
+    self.drawOrderTotal(Order);
+  }
   this.updateOrderItemTotal = function (order_item) {
+    if (IS.activated(order_item)) {
+      setTimeout(function () {
+        self.updateNonNormal(order_item);
+      },200);
+      return;
+    }
     var id = "#order_item_" + order_item.index  + '_total';
     if (order_item.is_buyback == true && order_item.price > 0) {
       order_item.price *= -1;
@@ -343,7 +388,6 @@ var POS = function () {
       }
     });
     order_item.total = Round(order_item.total - (order_item.total * (order_item.rebate/100)),2);
-    
     
     $(id).html(toCurrency(order_item.total)); 
     var ttl = 0.0;
@@ -424,7 +468,11 @@ var POS = function () {
     } else {
       // we need to ask the server
       $.get('/items/by_sku?sku=' + sku,function (item) {
-        self.createOrderItem(item);
+        if (item.sku) {
+          self.createOrderItem(item);
+        } else {
+          alert("Not An Item.");
+        }
         self.dont_focus_sku_input = false;
       });
     } 
