@@ -20,9 +20,11 @@ class OrderItem < ActiveRecord::Base
   attr_accessor :is_valid
   has_many :coupons, :class_name => 'OrderItem', :foreign_key => :coupon_id
   belongs_to :order_item,:foreign_key => :coupon_id
-
+  attr_accessor :actions,:parts
   scope :sorted_by_modified, order('updated_at ASC')
-  
+  def index=(i)
+    
+  end
   def get_tax_profile_letter
     if self.item.tax_profile then
       return self.item.tax_profile.letter
@@ -31,6 +33,7 @@ class OrderItem < ActiveRecord::Base
     end
   end
   def get_translated_name(locale)
+    return self.name if self.name and not self.name.blank?
     if self.item then
       return self.item.get_translated_name(locale)
     else
@@ -266,6 +269,77 @@ class OrderItem < ActiveRecord::Base
     write_attribute(:quantity,q)
   end
   
+  def set_item2(item,qty=1) #used for new pos interface
+    item.make_valid
+    if self.order and self.order.paid == 1 then
+      return false
+    end
+    #item.make_valid # MF: this should be done only when saving an item, I guess it's a slowdown on each barcode scan
+    
+    # GIFT CARD
+    if item.behavior == 'gift_card' then
+      if item.activated and item.amount_remaining <= 0 then
+        GlobalErrors.append('system.errors.gift_card_empty',self)
+        self.is_valid = nil
+        return false
+      end
+    end
+    
+    # Copying Item attributes over to OrderItem attributes
+    self.name = item.get_translated_name(I18n.locale)
+    self.is_valid = true
+    self.tax_profile_id = item.tax_profile_id
+    self.item_type_id = item.item_type_id
+    self.item_id = item.id
+    self.parts = item.parts
+    self.weigh_compulsory = item.weigh_compulsory
+    self.calculate_part_price = item.calculate_part_price
+    if item.default_buyback then
+      self.is_buyback = true # MF: can be written into one line
+    end
+    if self.weigh_compulsory then
+      self.quantity = 0
+    else
+      self.quantity = qty # usually 1 as default
+    end
+    self.category_id = item.category_id
+    self.location_id = item.location_id
+    self.behavior = item.behavior
+    self.tax_profile_amount = item.tax_profile.value if item.tax_profile
+    self.amount_remaining = item.amount_remaining
+    self.sku = item.sku
+    self.activated = item.activated
+    #if self.quantity > item.quantity or self.quantity == 0 then
+    #  GlobalErrors.append('system.errors.insufficient_quantity_on_item',self,{:sku => item.sku})
+    #end
+    
+    # GS1
+    if item.is_gs1 then
+      p = get_gs1_price(GlobalData.params.sku, self.item)
+      if p.nil? then
+        GlobalErrors.append_fatal("system.errors.gs1_item_not_found",self,{:sku => GlobalData.params.sku})
+      end
+      if not self.item.price_by_qty then
+        self.price = p
+      else
+        self.quantity = p
+        self.price = self.item.base_price
+      end
+    end
+    
+    if item.activated and item.amount_remaining >= 1 then
+      # GIFT CARD
+      self.price = item.amount_remaining
+    else
+      # NORMAL
+      self.price = discover_price(item)
+      oi = Action.run(self,:add_to_order)
+      #oi.total =  #oi.price * oi.quantity
+      oi.calculate_tax(true)
+    end
+    return self
+  end
+  
 	def set_item(item,qty=1)
     item.make_valid
     if self.order and self.order.paid == 1 then
@@ -274,7 +348,7 @@ class OrderItem < ActiveRecord::Base
 	  #item.make_valid # MF: this should be done only when saving an item, I guess it's a slowdown on each barcode scan
 
     # GIFT CARD
-		if item.item_type.behavior == 'gift_card' then
+		if item.behavior == 'gift_card' then
 		  if item.activated and item.amount_remaining <= 0 then
 		    GlobalErrors.append('system.errors.gift_card_empty',self)
 		    self.is_valid = nil
@@ -298,7 +372,7 @@ class OrderItem < ActiveRecord::Base
 		end
 		self.category_id = item.category_id
 		self.location_id = item.location_id
-		self.behavior = item.item_type.behavior
+		self.behavior = item.behavior
 		self.tax_profile_amount = item.tax_profile.value if item.tax_profile
 		self.amount_remaining = item.amount_remaining
 		self.sku = item.sku
@@ -340,6 +414,7 @@ class OrderItem < ActiveRecord::Base
 
 	#
   def calculate_total(order_subtotal=0)
+    puts "order_item.calculat_total called #{self.sku}"
     # i.e. we should not be able to alter the total of an order item once the order is marked as paid.
     if self.order and self.order.paid == 1 then
       return self.total
@@ -432,7 +507,7 @@ class OrderItem < ActiveRecord::Base
       ttl -= (ttl * (self.rebate / 100.0))
 #       puts "self.rebate: #{ttl}"
     end
-    if self.order.rebate then
+    if self.order and self.order.rebate then
       ttl -= (ttl * (self.order.rebate / 100.0))
       #       puts "self.rebate: #{ttl}"
     end
@@ -574,9 +649,9 @@ class OrderItem < ActiveRecord::Base
 
   #
   def discover_price(item)
-    puts "&&& In Discover price"
+#     puts "&&& In Discover price"
     if self.order and self.order.buy_order or self.is_buyback then
-      return item.buyback_price if self.order.buy_order
+      return item.buyback_price if self.order and self.order.buy_order
       return (item.buyback_price * -1)
     end
     if not item.behavior == 'normal' then
@@ -605,8 +680,8 @@ class OrderItem < ActiveRecord::Base
             not (discount.location_id == item.location_id and discount.applies_to == 'Location') and
             not (discount.category_id == item.category_id and discount.applies_to == 'Category') and
             not (discount.applies_to == 'Vendor' and discount.amount_type == 'percent') then
-             puts "&&& this discount doesn't match"
-             puts "&&& category_id is #{discount.category_id} and category_id is #{item.category_id}"
+#              puts "&&& this discount doesn't match"
+#              puts "&&& category_id is #{discount.category_id} and category_id is #{item.category_id}"
           next
         end
 #         puts "Applying discount"
@@ -623,25 +698,61 @@ class OrderItem < ActiveRecord::Base
         end
       end # Discount.scopied.where(conds)
     else
-      puts "Not Applying Discounts at all..."
+#       puts "Not Applying Discounts at all..."
     end
     #p -= damount
     self.update_attribute(:discount_applied,true) if self.discounts.any?
     self.update_attribute(:discount_amount,damount) if self.discounts.any?
     p = p.round(2)
-    puts "&&& price for item is: #{p}"
+#     puts "&&& price for item is: #{p}"
     return p
   end
 
   #
-  def to_json
+#   def as_json(x) #used in auto conversion, the to_json method is left for backwards compat
+#     raise "called"
+#     obj = {}
+#     if self.order and self.order.buy_order and self.is_buyback then
+#       self.update_attribute :is_buyback, false
+#     end
+#     if self.item then
+#       obj = {
+#         :name => self.get_translated_name(I18n.locale)[0..20],
+#         :sku => self.item.sku,
+#         :item_id => self.item_id,
+#         :activated => self.item.activated,
+#         :amount_remaining => self.item.amount_remaining,
+#         :coupon_type => self.item.coupon_type,
+#         :quantity => self.quantity,
+#         :price => self.price.round(2),
+#         :coupon_amount => -1 * self.coupon_amount.round(2),
+#         :total => self.total.round(2),
+#         :id => self.id,
+#         :behavior => self.behavior,
+#         :discount_amount => self.discount_amount.round(2) * -1,
+#         :rebate => self.rebate.nil? ? 0 : self.rebate,
+#         :is_buyback => self.is_buyback,
+#         :weigh_compulsory => self.item.weigh_compulsory,
+#         :must_change_price => self.item.must_change_price,
+#         :weight_metric => self.item.weight_metric,
+#         :tax_profile_amount => self.tax_profile_amount,
+#         :action_applied => self.action_applied,
+#         :actions => self.actions
+#       }
+#     end
+#     if self.behavior == 'gift_card' and self.activated then
+#       obj[:price] = obj[:price] * -1
+#     end
+#     return obj
+#   end
+  def to_json(x=nil)
     obj = {}
     if self.order and self.order.buy_order and self.is_buyback then
       self.update_attribute :is_buyback, false
     end
     if self.item then
       obj = {
-        :name => self.item.name[0..20],
+        :name => self.get_translated_name(I18n.locale)[0..20],
         :sku => self.item.sku,
         :item_id => self.item_id,
         :activated => self.item.activated,
@@ -654,14 +765,15 @@ class OrderItem < ActiveRecord::Base
         :id => self.id,
         :behavior => self.behavior,
         :discount_amount => self.discount_amount.round(2) * -1,
-        :locked => self.total_is_locked,
         :rebate => self.rebate.nil? ? 0 : self.rebate,
         :is_buyback => self.is_buyback,
         :weigh_compulsory => self.item.weigh_compulsory,
         :must_change_price => self.item.must_change_price,
         :weight_metric => self.item.weight_metric,
         :tax_profile_amount => self.tax_profile_amount,
-        :action_applied => self.action_applied
+        :action_applied => self.action_applied,
+        :actions => self.actions,
+        :parts => self.parts
       }
     end
     if self.behavior == 'gift_card' and self.activated then

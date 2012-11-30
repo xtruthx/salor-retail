@@ -12,7 +12,14 @@ class ItemsController < ApplicationController
   before_filter :initialize_instance_variables, :except => [:labels]
   before_filter :check_role, :except => [:info, :search, :labels, :crumble, :wholesaler_update]
   before_filter :crumble, :except => [:wholesaler_update, :labels]
-  
+  def by_sku
+    item = Item.get_by_code(params[:sku])
+    @order_item = OrderItem.new
+    @order_item.set_item2(item)
+    @order_item.actions = item.actions
+    @order_item.parts = item.parts
+    render :json => @order_item
+  end
   # GET /items
   # GET /items.xml
   def index
