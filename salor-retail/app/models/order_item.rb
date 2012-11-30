@@ -709,47 +709,16 @@ class OrderItem < ActiveRecord::Base
   end
 
   #
-#   def as_json(x) #used in auto conversion, the to_json method is left for backwards compat
-#     raise "called"
-#     obj = {}
-#     if self.order and self.order.buy_order and self.is_buyback then
-#       self.update_attribute :is_buyback, false
-#     end
-#     if self.item then
-#       obj = {
-#         :name => self.get_translated_name(I18n.locale)[0..20],
-#         :sku => self.item.sku,
-#         :item_id => self.item_id,
-#         :activated => self.item.activated,
-#         :amount_remaining => self.item.amount_remaining,
-#         :coupon_type => self.item.coupon_type,
-#         :quantity => self.quantity,
-#         :price => self.price.round(2),
-#         :coupon_amount => -1 * self.coupon_amount.round(2),
-#         :total => self.total.round(2),
-#         :id => self.id,
-#         :behavior => self.behavior,
-#         :discount_amount => self.discount_amount.round(2) * -1,
-#         :rebate => self.rebate.nil? ? 0 : self.rebate,
-#         :is_buyback => self.is_buyback,
-#         :weigh_compulsory => self.item.weigh_compulsory,
-#         :must_change_price => self.item.must_change_price,
-#         :weight_metric => self.item.weight_metric,
-#         :tax_profile_amount => self.tax_profile_amount,
-#         :action_applied => self.action_applied,
-#         :actions => self.actions
-#       }
-#     end
-#     if self.behavior == 'gift_card' and self.activated then
-#       obj[:price] = obj[:price] * -1
-#     end
-#     return obj
-#   end
+  def as_json(x) #used in auto conversion, the to_json method is left for backwards compat
+    return to_json(x)
+  end
   def to_json(x=nil)
     obj = {}
     if self.order and self.order.buy_order and self.is_buyback then
       self.update_attribute :is_buyback, false
     end
+    self.actions ||= self.item.actions
+    self.parts ||= self.item.parts
     if self.item then
       obj = {
         :name => self.get_translated_name(I18n.locale)[0..20],
@@ -772,14 +741,16 @@ class OrderItem < ActiveRecord::Base
         :weight_metric => self.item.weight_metric,
         :tax_profile_amount => self.tax_profile_amount,
         :action_applied => self.action_applied,
-        :actions => self.actions,
-        :parts => self.parts
+        :actions => self.actions ||= [],
+        :parts => self.parts ||= [],
+        :hidden => self.hidden
       }
     end
     if self.behavior == 'gift_card' and self.activated then
       obj[:price] = obj[:price] * -1
     end
-    return obj.to_json
+    return obj.to_json if x.nil?
+    return obj
   end
   
   def set_sold

@@ -42,8 +42,8 @@ class OrdersController < ApplicationController
     params[:order].delete(:origin);
     params[:order].delete(:destination);
     params[:order][:order_items].each do |oi|
-      if oi[1]['id'] != 'null' then
-        order_item = @order.order_items.find(oi[1]['id'])
+      if oi[1]['id'] != 'null' and @order.order_items.visible.find_by_id(oi[1]['id']) then
+        order_item = @order.order_items.visible.find(oi[1]['id'])
         order_item.vendor_id = @order.vendor_id
         order_item.update_attributes(oi[1])
       else
@@ -51,7 +51,7 @@ class OrdersController < ApplicationController
         order_item.vendor_id = @order.vendor_id
         @order.order_items << order_item
       end
-    end
+    end if params[:order][:order_items]
     params[:order].delete(:order_items);
     @order.payment_methods.clear
     params[:order][:payment_methods].each do |pm|
@@ -59,7 +59,7 @@ class OrdersController < ApplicationController
       opm = PaymentMethod.new(npm)
       opm.vendor_id = @order.vendor_id
       @order.payment_methods << opm
-    end
+    end if params[:order][:payment_methods]
     params[:order].delete(:payment_methods);
     @order.update_attributes(params[:order])
     if not params[:save] then
