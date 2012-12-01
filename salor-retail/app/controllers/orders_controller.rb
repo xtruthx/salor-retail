@@ -53,7 +53,7 @@ class OrdersController < ApplicationController
       end
     end if params[:order][:order_items]
     params[:order].delete(:order_items);
-    @order.payment_methods.clear
+    @order.payment_methods.delete_all
     params[:order][:payment_methods].each do |pm|
       npm = pm[1]
       opm = PaymentMethod.new(npm)

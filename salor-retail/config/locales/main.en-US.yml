@@ -641,7 +641,7 @@ en-US:
       thanks: Thank you for shopping with us!
       total: TOTAL                         EUR %8.2f
     order_receipt:
-      change: Change money
+      change: Change
       coupon_subtotal: Coupon Subtotal
       current_loyalty_points: Your loyalty points
       discount: Discount
