@@ -294,6 +294,7 @@ class OrderItem < ActiveRecord::Base
     self.parts = item.parts
     self.weigh_compulsory = item.weigh_compulsory
     self.calculate_part_price = item.calculate_part_price
+    self.coupon_applies = item.coupon_applies
     if item.default_buyback then
       self.is_buyback = true # MF: can be written into one line
     end
@@ -743,7 +744,8 @@ class OrderItem < ActiveRecord::Base
         :action_applied => self.action_applied,
         :actions => self.actions ||= [],
         :parts => self.parts ||= [],
-        :hidden => self.hidden
+        :hidden => self.hidden,
+        :coupon_applies => self.coupon_applies
       }
     end
     if self.behavior == 'gift_card' and self.activated then

@@ -355,6 +355,7 @@ class Item < ActiveRecord::Base
   end
   def make_valid
     self.sku = self.sku.upcase
+    self.coupon_applies = self.coupon_applies.upcase if self.coupon_applies
     invld = false
     if self.vendor_id.nil? then
       self.vendor_id = $Vendor.id
