@@ -87,7 +87,9 @@ var POS = function () {
       setTimeout(function () { inp.focus(); inp.select();},100);
       _set('order_total',_get('order_total_was',$(this)),inp );
       inp.keyup(function () {
-        $('#recalc_change').html( toCurrency( Round(toFloat($(this).val()) - _get('order_total',$(this)),2) ) );
+        var ttl = _get('order_total',$(this));
+        var amnt = toFloat($(this).val());
+        $('#recalc_change').html( toCurrency( Round(amnt - ttl,2) ) );
       });
     });
     
@@ -163,6 +165,7 @@ var POS = function () {
     // this way, the change on the last order is still shown after
     // complete.
     if (Order.order_items.length > 0) {
+      console.log('pmt_ttl',pm_ttl,'order.total',Order.total, 'change is',pm_ttl - Order.total);
       $('#order_change').html(toCurrency(Round(pm_ttl - Order.total,2)));
       _set('order_total_was',Order.total,$('#order_change'));
       _set('order_id_was',Order.id,$('#order_change'));
@@ -204,6 +207,9 @@ var POS = function () {
         self.detailedOrderItemMenu(event);
     });
     name.html(order_item.name);
+    if (order_item.action_applied) {
+      name.addClass('pos-action-applied');
+    }
     
     var quantity = shared.element('div',{id: id + '_quantity' },order_item.quantity,row); 
     quantity.html(order_item.quantity);
