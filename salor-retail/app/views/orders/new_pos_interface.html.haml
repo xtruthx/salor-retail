@@ -1,4 +1,3 @@
-= render :partial => "menu", :locals => {:order => @order}
 = render :partial => "buttons/popup", :layout => false
 = render :partial => "shared/search"
 = render :partial => "last_five_orders"
@@ -7,6 +6,5 @@
 %div{:id => "pos_container"}
 :javascript
   $(function () {
-    $pos = new POS();
-    $pos.documentReady(); // see pos.js for new functionality
+    $pos = new POS().documentReady(); // see pos.js for new functionality
   } );

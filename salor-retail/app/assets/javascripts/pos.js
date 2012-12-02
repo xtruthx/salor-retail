@@ -18,9 +18,9 @@ var IS = {
     return (IS.coupon(order_item) && order_item.coupon_type == 3);
   }
 }
-Order.has = function (sku) {
+has = function (sku) {
   var ret = false;
-  $.each(this.order_items,function (k,order_item) {
+  $.each(Order.order_items,function (k,order_item) {
     if (order_item.sku.toUpperCase() == sku.toUpperCase()) {
       ret = order_item;
       return;
@@ -31,9 +31,9 @@ Order.has = function (sku) {
 function totalOf(order_item) {
   return order_item.total - order_item.coupon_amount;
 }
-Order.calculateTaxes = function () {
+calculateTaxes = function () {
   var taxes = 0;
-  $.each(this.order_items,function ( k,order_item) {
+  $.each(Order.order_items,function ( k,order_item) {
     if (IS.activated(order_item) || IS.coupon(order_item)) {
      order_item.tax = 0; 
     } else {
@@ -50,13 +50,14 @@ Order.calculateTaxes = function () {
     taxes += order_item.tax;
   });
   $('#order_tax').html(toCurrency(taxes));
-  console.log("Taxes: ",taxes);
+  Order.tax = taxes;
   return taxes;
 }
 var POS = function () {
   var self = this;
   this.pos_container = null;
   this.order_items_container = null;
+  this.pos_menu = null;
   this.control_panel = null;
   this.seen_items = {};
   this.dont_focus_sku_input = false;
@@ -69,8 +70,7 @@ var POS = function () {
     self.pos_container.offset({top: off.top + 20});
     // i.e. we want the container to be a little off
     self.pos_container.height($(window).height() - (self.pos_container.offset().top + 20));
-    self.drawOrderItemsContainer();
-    self.drawControlPanel();
+    self.drawOrderItemsContainer().drawPosMenu().drawControlPanel();
     _set('order_dirty',true);
     setInterval(function () {
       if ( (
@@ -90,6 +90,7 @@ var POS = function () {
           self.drawOrder(Order);
         }
     },250);
+    return self;
   }
   // Drawing the interface
   this.drawOrderItemsContainer = function () {
@@ -97,7 +98,15 @@ var POS = function () {
     self.order_items_container = oic;
     oic.width(self.pos_container.width() * 0.70);
     oic.height(self.pos_container.height() * 0.95);  
+    return self;
   }
+  this.drawPosMenu = function () {
+    var menu =  shared.element('div',{id:'pos_menu'},'',self.pos_container);
+    shared.helpers.top_right(menu,self.order_items_container);
+    self.pos_menu = menu;
+    
+    return self;
+  }// end drawPosMenu
   this.drawControlPanel = function () {
     var cp = shared.element("div",{id: "pos_control_panel"},'',self.pos_container);
     var off = self.order_items_container.offset();
@@ -187,6 +196,7 @@ var POS = function () {
     save_order.mousedown(function () {
       self.saveOrder(true);
     });
+    return self;
   }
   this.drawOrderTotal = function (o) {
     var change = 0;
@@ -215,16 +225,18 @@ var POS = function () {
       _set('order_id_was',Order.id,$('#order_change'));
       _set('pm_ttl',pm_ttl,$('#order_change'));
     }
+    return self;
   }
   this.drawOrder = function (o) {
     self.drawOrderTotal(o);
     self.drawOrderItems(Order.order_items);
     _set('order_dirty',false); // when we do something to the order, need to set it dirty
+    return self;
   }
   /* OrderItem work */
   this.drawOrderItems = function (order_items) {
     if ($('.floating-input').is(":visible")) {
-      return;
+      return self;
     }
     self.order_items_container.html('');
     shared.element('h3',{},i18n.activerecord.models.order_item.other,self.order_items_container);
@@ -237,6 +249,7 @@ var POS = function () {
         self.updateOrderItemTotal(order_item);
       }
     }
+    return self;
   }
   this.drawOrderItem = function (order_item,index) {
     var id = "order_item_" + index;
@@ -391,7 +404,7 @@ var POS = function () {
     if (order_item.is_buyback == true) {
       total.addClass('pos-highlight');
     }
-    
+    return self;
   } // end this.drawOrderItem
   this.tallyNormalItems = function (order) {
     var ttl = 0;
@@ -402,9 +415,8 @@ var POS = function () {
     });
     
     if (Conf.calculate_tax) {
-      ttl += Order.calculateTaxes();
+      ttl += calculateTaxes();
     }
-    console.log('tallyNormalItems',ttl);
     return ttl;
   }
   this.updateNonNormal = function (order_item) {
@@ -418,22 +430,22 @@ var POS = function () {
       order_item.total = order_item.price;
       Order.total = ttl + order_item.total;
     } else if (IS.b1g1(order_item)) {
-      var target = Order.has(order_item.coupon_applies);
+      var target = has(order_item.coupon_applies);
       if (target && target.quantity > 1) {
         order_item.quantity = Math.floor(target.quantity / 2);
         order_item.price = order_item.quantity * target.price;
         target.coupon_amount = order_item.price;
         target.coupon_applied = true
         order_item.total = order_item.price * -1;
-        console.log('target_item',target);
         self.drawOrderItem(target,target.index);
         Order.total = self.tallyNormalItems(Order);
-        Order.calculateTaxes();
+        calculateTaxes();
         self.drawOrderTotal(Order);
       }
     }
     self.drawOrderItem(order_item,order_item.index);
     self.drawOrderTotal(Order);
+    return self;
   }
   this.updateOrderItemTotal = function (order_item) {
     if (IS.normal(order_item) == false) {
@@ -464,17 +476,23 @@ var POS = function () {
     $('#order_total').html(toCurrency(ttl));
     Order.subtotal = ttl;
     Order.total = ttl;
+    return self;
   } //end updateOrderItemTotal
   this.saveOrder = function (saveonly) {
-    if (saveonly) {
-      $.post('/orders/new_pos_complete?save=true', {order: Order}, function () {
-        _set('order_dirty',true);
-      });
-    } else {
-      $.post('/orders/new_pos_complete', {order: Order}, function () {
-        _set('order_dirty',true);
-      });
+    try {
+      if (saveonly) {
+        $.post('/orders/new_pos_complete?save=true', {order: Order}, function () {
+          _set('order_dirty',true);
+        });
+      } else {
+        $.post('/orders/new_pos_complete', {order: Order}, function () {
+          _set('order_dirty',true);
+        });
+      }
+    } catch (err) {
+      
     }
+    return self;
   }
   this.collectPms = function (onlyttl) {
     var pms = [];
@@ -500,48 +518,55 @@ var POS = function () {
     return pm_ttl;
   }
   this.completeOrder = function (sender) {
-    var pm = _get('payment_method',sender);
-    var amount = toFloat($('#pos_sku_input').val());
-    $('#pos_sku_input').val('');
-    if (amount > 0) {
-      sender.html(pm.name + " " + toCurrency(amount));
-      _set('amount',amount,sender); // we'll need to clear these later
-    }
-    var pms = self.collectPms();
-    var pm_ttl = self.collectPmsTotal();
-    
-    if (pms.length == 0) {
-      var npm = {name: pm.name, internal_type: pm.internal_type, amount: Order.total}
-      pms.push(npm);
-      sender.html(pm.name + " " + toCurrency(Order.total));
-      pm_ttl = Order.total;
-    }
-    Order.payment_methods = pms;
-    if ((amount == 0 && pm_ttl >= Order.total) || (pm_ttl >= Order.total)) {
-      self.saveOrder(false);
-    } else {
-      self.saveOrder(true);
-    }
-    self.dont_focus_sku_input = false;
-    _set('order_dirty',true);
+      var pm = _get('payment_method',$(sender));
+      var amount = toFloat($('#pos_sku_input').val());
+      $('#pos_sku_input').val('');
+      
+      if (amount > 0) {
+        sender.html(pm.name + " " + toCurrency(amount));
+        _set('amount',amount,$(sender)); // we'll need to clear these later
+      }
+      
+      var pms = self.collectPms();
+      var pm_ttl = self.collectPmsTotal();
+      
+      if (pms.length == 0) {
+        var npm = {name: pm.name, internal_type: pm.internal_type, amount: Order.total}
+        pms.push(npm);
+        sender.html(pm.name + " " + toCurrency(Order.total));
+        pm_ttl = Order.total;
+      }
+      Order.payment_methods = pms;
+      
+      if ((amount == 0 && pm_ttl >= Order.total) || (pm_ttl >= Order.total)) {
+        self.saveOrder(false);
+      } else {
+        self.saveOrder(true);
+      }
+      self.dont_focus_sku_input = false;
+      _set('order_dirty',true);
+      return self;
   } // end completeOrder
   this.findItem = function (sku) {
+    sku = sku.toUpperCase();
     var sku_input = $('#pos_sku_input');
     sku_input.val('');
-    var oi = Order.has(sku);
+    var oi = has(sku);
     if (oi) {
       oi.quantity += 1;
       self.dont_focus_sku_input = false;
       self.drawOrderItem(oi);
       self.drawOrder(Order);
-      return;
+      return self;
     }
-    if (this.seen_items[sku]) {
-      console.log("i've seen this before");
+    if (self.seen_items[sku]) {
+      self.createOrderItem(self.seen_items[sku]);
+      self.dont_focus_sku_input = false;
     } else {
       // we need to ask the server
       $.get('/items/by_sku?sku=' + sku,function (item) {
         if (item.sku) {
+          self.seen_items[item.sku] = item;
           self.createOrderItem(item);
         } else {
           alert("Not An Item.");
@@ -549,10 +574,12 @@ var POS = function () {
         self.dont_focus_sku_input = false;
       });
     } 
+    return self;
   } // end findItem
   this.createOrderItem = function (item) {
     Order.order_items.push(item);
     self.drawOrderItems(Order.order_items);
+    return self;
   }
   this.detailedOrderItemMenu = function (event) {
     $('.item-menu-div').remove();
