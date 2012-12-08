@@ -9,12 +9,13 @@
 class FileUpload
   # {START}
   def type1(shipper_name, file_lines) #danczek_tobaccoland_plattner_moosmayr
-    shipper = Shipper.find_by_name(shipper_name)
+#     return { :updated_items => 1, :created_items => 1, :created_categories => 1, :created_tax_profiles => 1 }
+    shipper = Shipper.scopied.visible.find_by_name(shipper_name)
     if shipper.nil?
       shipper = Shipper.create(:name => shipper_name, :vendor_id => $Vendor.id)
     end
     shipper_id = shipper ? shipper.id : nil
-    i, updated_items, created_items, created_categories, created_tax_profiles = [0,0,0,0,0]
+    i, updated_items, created_items, created_categories, created_tax_profiles,messages = [0,0,0,0,0,[]]
     if file_lines.first.include? '#' then
      delim = '#'
     elsif file_lines.first.include? ';'
@@ -29,7 +30,8 @@ class FileUpload
 
       shipper_sku = columns[0].strip
 
-      name = Iconv.new('UTF-8//TRANSLIT', 'ISO-8859-15').iconv(columns[1].strip)
+      name = columns[1].strip
+      name.encode('UTF-8', :invalid => :replace, :undef => :replace)
 
       packaging_unit_pack = columns[12].gsub(',','.').to_f
       packaging_unit_carton = columns[11].gsub(',','.').to_f
@@ -95,7 +97,7 @@ class FileUpload
         ActiveRecord::Base.logger.info "[WHOLESALER IMPORT TYPE 1] Creating carton item #{carton_item.name} #{carton_item.sku}"
         created_items += 1
       end
-
+      
       # pack
       attributes = { :shipper_sku => shipper_sku, :name => name + " Packung", :packaging_unit => packaging_unit_pack, :base_price => base_price_pack, :purchase_price => purchase_price_pack, :tax_profile_id => tax_profile_id, :category_id => category_id, :shipper_id => shipper_id }
       sku_pack = columns[9].strip
@@ -106,7 +108,8 @@ class FileUpload
         attributes.merge! :sku => sku_pack unless sku_pack.empty?
         pack_item.attributes = attributes
         Action.run(pack_item,:on_import)
-        pack_item.parent = carton_item if not pack_item.sku == carton_item.sku
+        carton_item.reload
+        carton_item.update_attribute(:child_id, pack_item.id) unless pack_item.id == carton_item.child_id or pack_item.sku == carton_item.sku
         pack_item.save
         updated_items += 1
       else
@@ -116,12 +119,13 @@ class FileUpload
         pack_item.set_model_owner
         Action.run(pack_item,:on_import)
         pack_item.save
-        pack_item.parent = carton_item if not pack_item.sku == carton_item.sku
+        carton_item.reload
+        carton_item.update_attribute(:child_id, pack_item.id) unless pack_item.id == carton_item.child_id or pack_item.sku == carton_item.sku
         pack_item.save
         ActiveRecord::Base.logger.info "[WHOLESALER IMPORT TYPE 1] Creating pack item #{pack_item.name} #{pack_item.sku}"
         created_items += 1
       end
-
+      
       # piece
       attributes = { :shipper_sku => shipper_sku, :name => name + " Stk.", :packaging_unit => 1, :base_price => base_price_piece, :purchase_price => purchase_price_piece, :tax_profile_id => tax_profile_id, :category_id => category_id, :shipper_id => shipper_id }
       sku_piece = columns[19].strip if columns[19]
@@ -132,7 +136,8 @@ class FileUpload
         attributes.merge! :sku => sku_piece unless sku_piece.empty?
         piece_item.attributes = attributes
         Action.run(piece_item,:on_import)
-        piece_item.parent = pack_item if not pack_item.sku == piece_item.sku
+        pack_item.reload
+        pack_item.update_attribute(:child_id, piece_item.id) unless piece_item.id == pack_item.child_id or piece_item.sku == pack_item.sku
         piece_item.save
         updated_items += 1
       else
@@ -142,17 +147,19 @@ class FileUpload
         piece_item.set_model_owner
         Action.run(piece_item,:on_import)
         piece_item.save
-        piece_item.parent = pack_item if not pack_item.sku == piece_item.sku
+        pack_item.reload
+        pack_item.update_attribute(:child_id, piece_item.id) unless piece_item.id == pack_item.child_id or piece_item.sku == pack_item.sku
         piece_item.save
         ActiveRecord::Base.logger.info "[WHOLESALER IMPORT TYPE 1] Creating piece item #{piece_item.name} #{piece_item.sku}"
         created_items += 1
       end
     end
-    GlobalErrors.append('views.notice.wholesaler_upload_report', nil, { :updated_items => updated_items, :created_items => created_items, :created_categories => created_categories, :created_tax_profiles => created_tax_profiles })
+    return { :updated_items => updated_items, :created_items => created_items, :created_categories => created_categories, :created_tax_profiles => created_tax_profiles }
   end
 
   #
   def type2(shipper_name, file_lines) #house of smoke, dios
+    
     shipper = Shipper.find_by_name(shipper_name)
     if shipper.nil?
       shipper = Shipper.create(:name => shipper_name, :vendor_id => $Vendor.id)
@@ -175,7 +182,8 @@ class FileUpload
 
       shipper_sku = columns[0].strip
 
-      name = Iconv.new('UTF-8//TRANSLIT', 'UTF-8').iconv(columns[1].strip)
+      name = columns[1].strip
+      name.encode('UTF-8', :invalid => :replace, :undef => :replace)
 
       packaging_unit_pack = columns[12].gsub(',','.').to_f
       packaging_unit_pack = 1 if packaging_unit_pack.zero?
@@ -255,7 +263,8 @@ class FileUpload
         attributes.merge! :sku => sku_pack unless sku_pack.empty?
         pack_item.update_attributes attributes
         Action.run(pack_item,:on_import)
-        pack_item.parent = carton_item if not pack_item.sku == carton_item.sku
+        carton_item.reload
+        carton_item.update_attribute(:child_id, pack_item.id) unless pack_item.id == carton_item.child_id or pack_item.sku == carton_item.sku
         pack_item.save
         updated_items += 1
       else
@@ -265,7 +274,8 @@ class FileUpload
         pack_item.set_model_owner
         Action.run(pack_item,:on_import)
         pack_item.save
-        pack_item.parent = carton_item if not pack_item.sku == carton_item.sku
+        carton_item.reload
+        carton_item.update_attribute(:child_id, pack_item.id) unless pack_item.id == carton_item.child_id or pack_item.sku == carton_item.sku
         pack_item.save
         ActiveRecord::Base.logger.info "[WHOLESALER IMPORT TYPE 2] Creating pack item #{pack_item.name} #{pack_item.sku}"
         created_items += 1
@@ -281,7 +291,8 @@ class FileUpload
         attributes.merge! :sku => sku_piece unless sku_piece.empty?
         piece_item.update_attributes attributes
         Action.run(piece_item,:on_import)
-        piece_item.parent = pack_item if not pack_item.sku == piece_item.sku
+        pack_item.reload
+        pack_item.update_attribute(:child_id, piece_item.id) unless piece_item.id == pack_item.child_id or piece_item.sku == pack_item.sku
         piece_item.save
         updated_items += 1
       else
@@ -291,13 +302,14 @@ class FileUpload
         piece_item.set_model_owner
         Action.run(piece_item,:on_import)
         piece_item.save
-        piece_item.parent = pack_item if not pack_item.sku == piece_item.sku
+        pack_item.reload
+        pack_item.update_attribute(:child_id, piece_item.id) unless piece_item.id == pack_item.child_id or piece_item.sku == pack_item.sku
         piece_item.save
         ActiveRecord::Base.logger.info "[WHOLESALER IMPORT TYPE 2] Creating piece item #{piece_item.name} #{piece_item.sku}"
         created_items += 1
       end
     end
-    GlobalErrors.append('views.notice.wholesaler_upload_report', nil, { :updated_items => updated_items, :created_items => created_items, :created_categories => created_categories, :created_tax_profiles => created_tax_profiles })
+    return { :updated_items => updated_items, :created_items => created_items, :created_categories => created_categories, :created_tax_profiles => created_tax_profiles }
   end
 
   #

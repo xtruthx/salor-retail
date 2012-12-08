@@ -25,6 +25,10 @@ class OrderItem < ActiveRecord::Base
   def index=(i)
     
   end
+  def item_type_id=(id)
+    write_attribute(:behavior,ItemType.find(id).behavior)
+    write_attribute(:item_type_id,id)
+  end
   def get_tax_profile_letter
     if self.item.tax_profile then
       return self.item.tax_profile.letter

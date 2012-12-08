@@ -62,10 +62,12 @@ class Item < ActiveRecord::Base
     return self.tax_profile.name if self.tax_profile
     return n
   end
-  def get_translated_name(locale)
+  def get_translated_name(locale=:en)
     locale = locale.to_s
     trans = read_attribute(:name_translations)
-    if trans.empty? or trans.nil?
+    if self.behavior == 'gift_card'
+      return I18n.t('activerecord.models.item_type.gift_card', :locale => locale)
+    elsif trans.empty? or trans.nil?
       return read_attribute(:name)
     else
       hash = ActiveSupport::JSON.decode(trans)
@@ -157,7 +159,6 @@ class Item < ActiveRecord::Base
     end
     if string == self.sku then
       errors.add(:child_sku,I18n.t("system.errors.parent_sku"))
-      GlobalErrors.append_fatal("system.errors.parent_sku")
       return
     end
 
@@ -165,7 +166,6 @@ class Item < ActiveRecord::Base
     if p then
       if self.child.id == p.id then
         errors.add(:parent_sku, I18n.t("system.errors.parent_sku"))
-        GlobalErrors.append_fatal("system.errors.parent_sku")
         p.update_attribute(:child_id,nil) # break circular relationship in case it existed before creating the item
       else
         self.save # this is necessary since at this point self.id is still nil
@@ -173,7 +173,6 @@ class Item < ActiveRecord::Base
       end
     else
       errors.add(:parent_sku, I18n.t('system.errors.parent_sku_must_exist'))
-      GlobalErrors.append_fatal("system.errors.parent_sku_must_exist")
     end
   end
   def child_sku=(string)
@@ -446,9 +445,9 @@ class Item < ActiveRecord::Base
   # Reorder recommendation csvs
   
   def self.recommend_reorder(type)
-    shippers = Shipper.scopied.find_all_by_reorder_type(type)
+    shippers = Shipper.where(:vendor_id => $User.vendor_id).find_all_by_reorder_type(type)
     shippers << nil if type == 'default_export'
-    items = Item.scopied.visible.where("quantity < min_quantity AND ignore_qty = 0").where(:shipper_id => shippers)
+    items = Item.scopied.visible.where("quantity < min_quantity AND (ignore_qty IS FALSE OR ignore_qty IS NULL)").where(:shipper_id => shippers)
     if not items.any? then
       return nil 
     end
