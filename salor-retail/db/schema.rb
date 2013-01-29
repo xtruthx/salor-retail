@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130123045115) do
+ActiveRecord::Schema.define(:version => 20130129143615) do
 
   create_table "actions", :force => true do |t|
     t.string   "name"
@@ -66,6 +66,12 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.string   "color"
     t.integer  "position"
     t.integer  "hidden",            :default => 0
+  end
+
+  create_table "buyers", :force => true do |t|
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+    t.string   "id_hash"
   end
 
   create_table "cash_register_dailies", :force => true do |t|
@@ -169,14 +175,18 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.string   "telephone"
     t.string   "cellphone"
     t.string   "email"
-    t.datetime "created_at",                  :null => false
-    t.datetime "updated_at",                  :null => false
+    t.datetime "created_at",                      :null => false
+    t.datetime "updated_at",                      :null => false
     t.integer  "vendor_id"
     t.string   "company_name"
     t.string   "sku"
-    t.integer  "hidden",       :default => 0
+    t.integer  "hidden",           :default => 0
     t.integer  "hidden_by"
     t.string   "tax_number"
+    t.string   "id_hash"
+    t.boolean  "signup_activated"
+    t.string   "singup_email"
+    t.string   "signup_email"
   end
 
   add_index "customers", ["vendor_id"], :name => "index_customers_on_vendor_id"
@@ -397,62 +407,75 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.string   "sku"
     t.string   "image"
     t.integer  "vendor_id"
-    t.datetime "created_at",                               :null => false
-    t.datetime "updated_at",                               :null => false
-    t.float    "base_price",            :default => 0.0
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
+    t.float    "base_price",                          :default => 0.0
     t.integer  "location_id"
     t.integer  "category_id"
     t.integer  "tax_profile_id"
     t.integer  "item_type_id"
-    t.float    "amount_remaining",      :default => 0.0
-    t.boolean  "activated",             :default => false
+    t.float    "amount_remaining",                    :default => 0.0
+    t.boolean  "activated",                           :default => false
     t.integer  "void"
     t.integer  "coupon_type"
     t.string   "coupon_applies"
-    t.float    "quantity",              :default => 0.0
-    t.float    "quantity_sold",         :default => 0.0
-    t.integer  "hidden",                :default => 0
+    t.float    "quantity",                            :default => 0.0
+    t.float    "quantity_sold",                       :default => 0.0
+    t.integer  "hidden",                              :default => 0
     t.integer  "part_id"
-    t.boolean  "calculate_part_price",  :default => false
-    t.float    "height",                :default => 0.0
-    t.float    "weight",                :default => 0.0
+    t.boolean  "calculate_part_price",                :default => false
+    t.float    "height",                              :default => 0.0
+    t.float    "weight",                              :default => 0.0
     t.string   "height_metric"
-    t.string   "weight_metric",         :default => "g"
-    t.float    "length",                :default => 0.0
-    t.float    "width",                 :default => 0.0
+    t.string   "weight_metric",                       :default => "g"
+    t.float    "length",                              :default => 0.0
+    t.float    "width",                               :default => 0.0
     t.string   "length_metric"
     t.string   "width_metric"
     t.integer  "is_part"
-    t.boolean  "is_gs1",                :default => false
+    t.boolean  "is_gs1",                              :default => false
     t.boolean  "price_by_qty"
     t.integer  "decimal_points"
-    t.float    "part_quantity",         :default => 0.0
+    t.float    "part_quantity",                       :default => 0.0
     t.string   "behavior"
-    t.float    "tax_profile_amount",    :default => 0.0
+    t.float    "tax_profile_amount",                  :default => 0.0
     t.string   "sales_metric"
-    t.float    "purchase_price",        :default => 0.0
+    t.float    "purchase_price",                      :default => 0.0
     t.date     "expires_on"
-    t.float    "buyback_price",         :default => 0.0
-    t.integer  "quantity_buyback",      :default => 0
-    t.boolean  "default_buyback",       :default => false
-    t.float    "real_quantity",         :default => 0.0
-    t.boolean  "weigh_compulsory",      :default => false
-    t.float    "min_quantity",          :default => 0.0
-    t.boolean  "active",                :default => true
+    t.float    "buyback_price",                       :default => 0.0
+    t.integer  "quantity_buyback",                    :default => 0
+    t.boolean  "default_buyback",                     :default => false
+    t.float    "real_quantity",                       :default => 0.0
+    t.boolean  "weigh_compulsory",                    :default => false
+    t.float    "min_quantity",                        :default => 0.0
+    t.boolean  "active",                              :default => true
     t.integer  "shipper_id"
     t.string   "shipper_sku"
-    t.float    "packaging_unit",        :default => 1.0
-    t.boolean  "ignore_qty",            :default => false
-    t.integer  "child_id",              :default => 0
-    t.boolean  "must_change_price",     :default => false
-    t.boolean  "hidden_by_distiller",   :default => false
-    t.boolean  "track_expiry",          :default => false
+    t.float    "packaging_unit",                      :default => 1.0
+    t.boolean  "ignore_qty",                          :default => false
+    t.integer  "child_id",                            :default => 0
+    t.boolean  "must_change_price",                   :default => false
+    t.boolean  "hidden_by_distiller",                 :default => false
+    t.boolean  "track_expiry",                        :default => false
     t.string   "customs_code"
     t.float    "manufacturer_price"
     t.string   "origin_country"
     t.text     "name_translations"
     t.integer  "hidden_by"
     t.boolean  "real_quantity_updated"
+    t.integer  "unit_price_cents"
+    t.string   "unit_price_currency"
+    t.boolean  "digital_content"
+    t.boolean  "subscription"
+    t.text     "digital_content_permissions"
+    t.string   "subscription_type"
+    t.boolean  "subscription_subdomain_required"
+    t.datetime "subscription_start_date"
+    t.integer  "subscription_times"
+    t.string   "subscription_api_url"
+    t.text     "subscription_api_params_subscribe"
+    t.text     "subscription_api_params_unsubscribe"
+    t.string   "subscription_period"
   end
 
   add_index "items", ["category_id"], :name => "index_items_on_category_id"
@@ -579,6 +602,11 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
   add_index "notes", ["notable_id"], :name => "index_notes_on_notable_id"
   add_index "notes", ["user_id"], :name => "index_notes_on_user_id"
 
+  create_table "order s", :force => true do |t|
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
   create_table "order_items", :force => true do |t|
     t.integer  "order_id"
     t.integer  "item_id"
@@ -619,8 +647,8 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.integer  "vendor_id"
     t.boolean  "tax_free",              :default => false
     t.integer  "hidden_by"
-    t.string   "coupon_applies"
     t.integer  "employee_id"
+    t.string   "coupon_applies"
   end
 
   add_index "order_items", ["behavior"], :name => "index_order_items_on_behavior"
@@ -638,33 +666,33 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.float    "subtotal"
     t.float    "total"
     t.float    "tax"
-    t.datetime "created_at",                                    :null => false
-    t.datetime "updated_at",                                    :null => false
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
     t.integer  "vendor_id"
     t.integer  "user_id"
     t.integer  "location_id"
     t.integer  "paid"
-    t.boolean  "refunded",               :default => false
+    t.boolean  "refunded",                        :default => false
     t.integer  "employee_id"
-    t.integer  "hidden",                 :default => 0
+    t.integer  "hidden",                          :default => 0
     t.integer  "cash_register_id"
     t.integer  "customer_id"
-    t.boolean  "total_is_locked",        :default => false
-    t.boolean  "tax_is_locked",          :default => false
-    t.boolean  "subtotal_is_locked",     :default => false
+    t.boolean  "total_is_locked",                 :default => false
+    t.boolean  "tax_is_locked",                   :default => false
+    t.boolean  "subtotal_is_locked",              :default => false
     t.integer  "cash_register_daily_id"
-    t.float    "rebate",                 :default => 0.0
-    t.string   "rebate_type",            :default => "percent"
+    t.float    "rebate",                          :default => 0.0
+    t.string   "rebate_type",                     :default => "percent"
     t.integer  "lc_points"
-    t.float    "in_cash",                :default => 0.0
-    t.float    "by_card",                :default => 0.0
+    t.float    "in_cash",                         :default => 0.0
+    t.float    "by_card",                         :default => 0.0
     t.datetime "refunded_at"
     t.integer  "refunded_by"
     t.string   "refunded_by_type"
-    t.float    "discount_amount",        :default => 0.0
+    t.float    "discount_amount",                 :default => 0.0
     t.string   "tag"
-    t.boolean  "buy_order",              :default => false
-    t.float    "lc_discount_amount",     :default => 0.0
+    t.boolean  "buy_order",                       :default => false
+    t.float    "lc_discount_amount",              :default => 0.0
     t.text     "bk_msgs_received"
     t.string   "p_result"
     t.string   "p_text"
@@ -674,18 +702,30 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.text     "j_text"
     t.string   "j_ind"
     t.boolean  "was_printed"
-    t.float    "front_end_change",       :default => 0.0
+    t.float    "front_end_change",                :default => 0.0
     t.string   "sku"
     t.integer  "drawer_id"
-    t.boolean  "tax_free",               :default => false
+    t.boolean  "tax_free",                        :default => false
     t.integer  "origin_country_id"
     t.integer  "destination_country_id"
     t.integer  "sale_type_id"
     t.text     "invoice_comment"
     t.text     "delivery_note_comment"
     t.integer  "nr"
-    t.boolean  "is_proforma",            :default => false
+    t.boolean  "is_proforma",                     :default => false
     t.integer  "hidden_by"
+    t.integer  "buyer_id"
+    t.string   "google_order_number"
+    t.integer  "total_cents"
+    t.string   "total_currency"
+    t.integer  "last_charged_amount_cents"
+    t.string   "last_charged_amount_currency"
+    t.integer  "last_authorized_amount_cents"
+    t.string   "last_authorized_amount_currency"
+    t.integer  "refund_amount_cents"
+    t.string   "refund_amount_currency"
+    t.integer  "unit_price_cents"
+    t.string   "unit_price_currency"
   end
 
   add_index "orders", ["cash_register_daily_id"], :name => "index_orders_on_cash_register_daily_id"
@@ -746,6 +786,328 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
     t.integer  "hidden_by"
+  end
+
+  create_table "salor_cart_authorization_amount_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.string   "google_order_number"
+    t.integer  "authorization_amount_cents",    :default => 0,     :null => false
+    t.string   "authorization_amount_currency", :default => "USD", :null => false
+    t.datetime "authorization_expiration_date"
+    t.string   "avs_response"
+    t.string   "cvn_response"
+    t.datetime "timestamp"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                                       :null => false
+    t.datetime "updated_at",                                       :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_buyers", :force => true do |t|
+    t.string   "sku"
+    t.boolean  "marketing_preferences_email_allowed"
+    t.string   "billing_phone"
+    t.string   "billing_fax"
+    t.string   "billing_last_name"
+    t.string   "billing_first_name"
+    t.string   "billing_email"
+    t.string   "billing_contact_name"
+    t.string   "billing_company_name"
+    t.string   "billing_address1"
+    t.string   "billing_address2"
+    t.string   "billing_postal_code"
+    t.string   "billing_country_code"
+    t.string   "billing_city"
+    t.string   "billing_region"
+    t.string   "shipping_phone"
+    t.string   "shipping_fax"
+    t.string   "shipping_first_name"
+    t.string   "shipping_last_name"
+    t.string   "shipping_email"
+    t.string   "shipping_contact_name"
+    t.string   "shipping_company_name"
+    t.string   "shipping_address1"
+    t.string   "shipping_address2"
+    t.string   "shipping_postal_code"
+    t.string   "shipping_country_code"
+    t.string   "shipping_city"
+    t.string   "shipping_region"
+    t.string   "signup_email"
+    t.string   "signup_ip"
+    t.boolean  "signup_activation_email_sent"
+    t.boolean  "signup_completed"
+    t.string   "password_salt"
+    t.datetime "created_at",                          :null => false
+    t.datetime "updated_at",                          :null => false
+    t.string   "id_hash"
+    t.string   "password_encrypted"
+    t.string   "activation_salt"
+    t.boolean  "signup_password_email_sent"
+    t.boolean  "signup_activated"
+  end
+
+  create_table "salor_cart_cancelled_subscription_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "reason"
+    t.string   "item_ids",                   :limit => 10000, :default => "--- []\n"
+    t.string   "google_order_number"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                                                          :null => false
+    t.datetime "updated_at",                                                          :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_categories", :force => true do |t|
+    t.string   "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "salor_cart_charge_amount_notifications", :force => true do |t|
+    t.integer  "latest_charge_amount_cents"
+    t.string   "latest_charge_amount_currency"
+    t.integer  "total_charge_amount_cents"
+    t.string   "total_charge_amount_currency"
+    t.integer  "latest_charge_fee_total_cents"
+    t.string   "latest_charge_fee_total_currency"
+    t.integer  "latest_charge_fee_flat_cents"
+    t.string   "latest_charge_fee_flat_currency"
+    t.string   "latest_charge_fee_percentage"
+    t.datetime "timestamp"
+    t.integer  "order_id"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                       :null => false
+    t.datetime "updated_at",                       :null => false
+    t.string   "google_order_number"
+  end
+
+  create_table "salor_cart_items", :force => true do |t|
+    t.integer  "order_id"
+    t.string   "name"
+    t.integer  "quantity"
+    t.integer  "unit_price_cents",                              :default => 0,     :null => false
+    t.string   "unit_price_currency",                           :default => "USD", :null => false
+    t.string   "description"
+    t.string   "sku"
+    t.boolean  "digital_content"
+    t.string   "digital_content_key"
+    t.string   "digital_content_url"
+    t.string   "digital_content_description"
+    t.boolean  "subscription"
+    t.string   "subscription_period"
+    t.string   "subscription_type"
+    t.datetime "subscription_start_date"
+    t.integer  "subscription_maximum_charge_cents",             :default => 0,     :null => false
+    t.string   "subscription_maximum_charge_currency",          :default => "USD", :null => false
+    t.datetime "created_at",                                                       :null => false
+    t.datetime "updated_at",                                                       :null => false
+    t.integer  "product_id"
+    t.integer  "total_cents",                                   :default => 0,     :null => false
+    t.string   "total_currency",                                :default => "USD", :null => false
+    t.integer  "subscription_times"
+    t.datetime "payment_last_date"
+    t.datetime "subscription_recurrence_request_last_date"
+    t.integer  "subscription_recurrence_request_last_cents"
+    t.string   "subscription_recurrence_request_last_currency"
+    t.string   "subscription_subdomain"
+    t.boolean  "subscription_subdomain_required"
+    t.string   "subscription_host"
+    t.boolean  "subscription_active"
+    t.boolean  "cancelled"
+    t.integer  "product_unit_price_cents"
+    t.integer  "product_unit_price_currency"
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+    t.string   "subscription_api_url"
+    t.boolean  "subscription_cancelled"
+    t.datetime "cancelled_at"
+    t.datetime "subscription_cancelled_at"
+  end
+
+  create_table "salor_cart_new_order_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "google_order_number"
+    t.integer  "order_total_cents",                                :default => 0,     :null => false
+    t.string   "order_total_currency",                             :default => "USD", :null => false
+    t.string   "fulfillment_order_state"
+    t.string   "financial_order_state"
+    t.string   "buyer_id"
+    t.integer  "order_adjustment_total_tax_cents",                 :default => 0,     :null => false
+    t.string   "order_adjustment_total_tax_currency",              :default => "USD", :null => false
+    t.boolean  "order_adjustment_merchant_calculation_successful"
+    t.integer  "order_adjustment_adjustment_total_cents",          :default => 0,     :null => false
+    t.string   "order_adjustment_adjustment_total_currency",       :default => "USD", :null => false
+    t.string   "merchant_order_number"
+    t.integer  "order_id"
+    t.datetime "created_at",                                                          :null => false
+    t.datetime "updated_at",                                                          :null => false
+    t.integer  "raw_google_notification_id"
+  end
+
+  create_table "salor_cart_option_items", :force => true do |t|
+    t.integer  "option_id"
+    t.integer  "unit_price_cents",            :default => 0,     :null => false
+    t.string   "unit_price_currency",         :default => "USD", :null => false
+    t.string   "name"
+    t.string   "description"
+    t.text     "digital_content_permissions"
+    t.integer  "product_id"
+    t.integer  "item_id"
+    t.datetime "created_at",                                     :null => false
+    t.datetime "updated_at",                                     :null => false
+    t.integer  "order_id"
+    t.integer  "total_cents",                 :default => 0,     :null => false
+    t.string   "total_currency",              :default => "USD", :null => false
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+  end
+
+  create_table "salor_cart_options", :force => true do |t|
+    t.string   "name"
+    t.string   "description"
+    t.integer  "product_id"
+    t.text     "digital_content_permissions"
+    t.integer  "unit_price_cents",                    :default => 0,     :null => false
+    t.string   "unit_price_currency",                 :default => "USD", :null => false
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
+    t.text     "subscription_api_params_subscribe"
+    t.text     "subscription_api_params_unsubscribe"
+  end
+
+  create_table "salor_cart_order_state_change_notifications", :force => true do |t|
+    t.datetime "timestamp"
+    t.string   "serial_number"
+    t.string   "google_order_number"
+    t.string   "new_financial_order_state"
+    t.string   "previous_financial_order_state"
+    t.string   "new_fulfillment_order_state"
+    t.string   "previous_fulfillment_order_state"
+    t.string   "reason"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                       :null => false
+    t.datetime "updated_at",                       :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_orders", :force => true do |t|
+    t.string   "google_order_number"
+    t.string   "merchant_order_number"
+    t.datetime "created_at",                                         :null => false
+    t.datetime "updated_at",                                         :null => false
+    t.integer  "buyer_id"
+    t.integer  "total_cents",                     :default => 0,     :null => false
+    t.string   "total_currency",                  :default => "USD", :null => false
+    t.boolean  "completed"
+    t.boolean  "payment_provider_redirected"
+    t.string   "payment_provider"
+    t.string   "payment_provider_redirect_url"
+    t.string   "google_analytics_data"
+    t.boolean  "contains_subscription_item"
+    t.boolean  "cancelled"
+    t.boolean  "charged"
+    t.boolean  "shipped"
+    t.datetime "last_charged_at"
+    t.integer  "last_charged_amount_cents",       :default => 0
+    t.string   "last_charged_amount_currency"
+    t.boolean  "charge_and_ship_sent"
+    t.string   "financial_state"
+    t.string   "fulfillment_state"
+    t.integer  "last_authorized_amount_cents",    :default => 0
+    t.string   "last_authorized_amount_currency"
+    t.boolean  "refunded"
+    t.datetime "last_refunded_at"
+    t.datetime "cancelled_at"
+    t.integer  "refund_amount_cents",             :default => 0,     :null => false
+    t.string   "refund_amount_currency",          :default => "USD", :null => false
+    t.datetime "shipped_at"
+  end
+
+  create_table "salor_cart_products", :force => true do |t|
+    t.string   "name"
+    t.text     "digital_content_permissions"
+    t.integer  "unit_price_cents",                    :default => 0,     :null => false
+    t.string   "unit_price_currency",                 :default => "USD", :null => false
+    t.integer  "category_id"
+    t.string   "description"
+    t.string   "sku"
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
+    t.boolean  "digital_content"
+    t.boolean  "subscription"
+    t.string   "subscription_type"
+    t.string   "subscription_period"
+    t.boolean  "subscription_subdomain_required"
+    t.datetime "subscription_start_date"
+    t.integer  "subscription_times"
+    t.string   "subscription_api_url"
+    t.text     "subscription_api_params_subscribe"
+    t.text     "subscription_api_params_unsubscribe"
+  end
+
+  create_table "salor_cart_raw_google_notifications", :force => true do |t|
+    t.string   "klass"
+    t.text     "raw_xml",             :limit => 16777215
+    t.datetime "created_at",                              :null => false
+    t.datetime "updated_at",                              :null => false
+    t.string   "google_order_number"
+    t.integer  "order_id"
+    t.boolean  "incoming"
+  end
+
+  create_table "salor_cart_refund_amount_notifications", :force => true do |t|
+    t.string   "google_order_number"
+    t.integer  "order_id"
+    t.integer  "raw_google_notification_id"
+    t.integer  "latest_refund_amount_cents",        :default => 0,     :null => false
+    t.string   "latest_refund_amount_currency",     :default => "USD", :null => false
+    t.integer  "total_refund_amount_cents",         :default => 0,     :null => false
+    t.string   "total_refund_amount_currency",      :default => "USD", :null => false
+    t.integer  "latest_fee_refund_amount_cents",    :default => 0,     :null => false
+    t.string   "latest_fee_refund_amount_currency", :default => "USD", :null => false
+    t.datetime "timestamp"
+    t.datetime "created_at",                                           :null => false
+    t.datetime "updated_at",                                           :null => false
+  end
+
+  create_table "salor_cart_risk_information_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "partial_card_number"
+    t.string   "ip_address"
+    t.string   "google_order_number"
+    t.boolean  "eligible_for_protection"
+    t.string   "cvn_response"
+    t.integer  "buyer_account_age"
+    t.string   "avs_response"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                 :null => false
+    t.datetime "updated_at",                 :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_tracking_informations", :force => true do |t|
+    t.integer  "order_id"
+    t.integer  "item_id"
+    t.string   "carrier"
+    t.string   "tracking_number"
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+  end
+
+  create_table "salor_cart_users", :force => true do |t|
+    t.string   "technician_email"
+    t.string   "password"
+    t.string   "password_encrypted"
+    t.string   "password_salt"
+    t.integer  "role",               :default => 10
+    t.datetime "created_at",                         :null => false
+    t.datetime "updated_at",                         :null => false
+    t.string   "id_hash"
   end
 
   create_table "salor_configurations", :force => true do |t|
@@ -957,10 +1319,17 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.integer  "auth_code"
     t.string   "last_path",                             :default => "/vendors"
     t.string   "role_cache"
+    t.string   "id_hash"
   end
 
   add_index "users", ["email"], :name => "index_users_on_email", :unique => true
   add_index "users", ["reset_password_token"], :name => "index_users_on_reset_password_token", :unique => true
+
+  create_table "usertests", :force => true do |t|
+    t.string   "password"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
 
   create_table "vendor_printers", :force => true do |t|
     t.string   "name"

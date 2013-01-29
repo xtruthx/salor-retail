@@ -171,4 +171,8 @@ SalorRetail::Application.routes.draw do
   # You can have the root of your site routed with "root"
   # just remember to delete public/index.html.
   root :to => "home#index"
+  if defined? SalorCart == 'constant'
+    mount SalorCart::Engine => "/cart"
+    match '*path' => 'salor_cart/products#index'
+  end
 end

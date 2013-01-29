@@ -2,7 +2,7 @@ if User.any? or Item.any? or Order.any?
   puts "Database is already seeded. Not running seed script again."
   Process.exit 0
 end
-
+puts "Running migration"
 # Consider this file also a tutorial on how the system works
 I18n.locale = 'en-US'
 ItemType.delete_all
@@ -84,6 +84,7 @@ def create_account(current_lang,lang)
       r.save()
       registers << r
     end
+    puts "Manager Password is #{current_lang}#{current_user}0"
     @manager = Employee.new(
       {
 	:username => 'manager' + "-#{lang}",
