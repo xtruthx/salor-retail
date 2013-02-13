@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130123045115) do
+ActiveRecord::Schema.define(:version => 20130207170933) do
 
   create_table "actions", :force => true do |t|
     t.string   "name"
@@ -253,6 +253,21 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
 
   add_index "drawers", ["owner_id"], :name => "index_drawers_on_owner_id"
 
+  create_table "employee_logins", :force => true do |t|
+    t.datetime "login"
+    t.datetime "logout"
+    t.float    "hourly_rate"
+    t.integer  "employee_id"
+    t.integer  "vendor_id"
+    t.integer  "shift_seconds"
+    t.float    "amount_due"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+  end
+
+  add_index "employee_logins", ["employee_id"], :name => "index_employee_logins_on_employee_id"
+  add_index "employee_logins", ["vendor_id"], :name => "index_employee_logins_on_vendor_id"
+
   create_table "employees", :force => true do |t|
     t.string   "email",                                 :default => "",                :null => false
     t.string   "encrypted_password",     :limit => 128, :default => "",                :null => false
@@ -280,6 +295,7 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.integer  "auth_code"
     t.string   "last_path",                             :default => "/cash_registers"
     t.string   "role_cache"
+    t.float    "hourly_rate"
   end
 
   add_index "employees", ["email"], :name => "index_employees_on_email", :unique => true
@@ -383,6 +399,22 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
 
   add_index "item_shippers", ["item_id"], :name => "index_item_shippers_on_item_id"
   add_index "item_shippers", ["shipper_id"], :name => "index_item_shippers_on_shipper_id"
+
+  create_table "item_stocks", :force => true do |t|
+    t.integer  "item_id"
+    t.integer  "stock_location_id"
+    t.float    "quantity"
+    t.integer  "location_id"
+    t.datetime "created_at",              :null => false
+    t.datetime "updated_at",              :null => false
+    t.float    "stock_location_quantity"
+    t.float    "location_quantity"
+    t.integer  "vendor_id"
+  end
+
+  add_index "item_stocks", ["item_id"], :name => "index_item_stocks_on_item_id"
+  add_index "item_stocks", ["location_id"], :name => "index_item_stocks_on_location_id"
+  add_index "item_stocks", ["stock_location_id"], :name => "index_item_stocks_on_stock_location_id"
 
   create_table "item_types", :force => true do |t|
     t.string   "name"
@@ -746,6 +778,413 @@ ActiveRecord::Schema.define(:version => 20130123045115) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
     t.integer  "hidden_by"
+  end
+
+  create_table "salor_cart_authorization_amount_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.string   "google_order_number"
+    t.integer  "authorization_amount_cents",    :default => 0,     :null => false
+    t.string   "authorization_amount_currency", :default => "USD", :null => false
+    t.datetime "authorization_expiration_date"
+    t.string   "avs_response"
+    t.string   "cvn_response"
+    t.datetime "timestamp"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                                       :null => false
+    t.datetime "updated_at",                                       :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_buyers", :force => true do |t|
+    t.string   "sku"
+    t.boolean  "marketing_preferences_email_allowed"
+    t.string   "billing_phone"
+    t.string   "billing_fax"
+    t.string   "billing_last_name"
+    t.string   "billing_first_name"
+    t.string   "billing_email"
+    t.string   "billing_contact_name"
+    t.string   "billing_company_name"
+    t.string   "billing_address1"
+    t.string   "billing_address2"
+    t.string   "billing_postal_code"
+    t.string   "billing_country_code"
+    t.string   "billing_city"
+    t.string   "billing_region"
+    t.string   "shipping_phone"
+    t.string   "shipping_fax"
+    t.string   "shipping_first_name"
+    t.string   "shipping_last_name"
+    t.string   "shipping_email"
+    t.string   "shipping_contact_name"
+    t.string   "shipping_company_name"
+    t.string   "shipping_address1"
+    t.string   "shipping_address2"
+    t.string   "shipping_postal_code"
+    t.string   "shipping_country_code"
+    t.string   "shipping_city"
+    t.string   "shipping_region"
+    t.string   "signup_email"
+    t.string   "signup_ip"
+    t.boolean  "signup_activation_email_sent"
+    t.boolean  "signup_completed"
+    t.string   "password_salt"
+    t.datetime "created_at",                          :null => false
+    t.datetime "updated_at",                          :null => false
+    t.string   "id_hash"
+    t.string   "password_encrypted"
+    t.string   "activation_salt"
+    t.boolean  "signup_password_email_sent"
+    t.boolean  "signup_activated"
+  end
+
+  create_table "salor_cart_cancelled_subscription_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "reason"
+    t.string   "item_ids",                   :limit => 10000, :default => "--- []\n"
+    t.string   "google_order_number"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                                                          :null => false
+    t.datetime "updated_at",                                                          :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_categories", :force => true do |t|
+    t.string   "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "salor_cart_category_translations", :force => true do |t|
+    t.integer  "salor_cart_category_id"
+    t.string   "locale"
+    t.string   "name"
+    t.datetime "created_at",             :null => false
+    t.datetime "updated_at",             :null => false
+  end
+
+  add_index "salor_cart_category_translations", ["locale"], :name => "index_salor_cart_category_translations_on_locale"
+  add_index "salor_cart_category_translations", ["salor_cart_category_id"], :name => "index_04b2db122847c52de739e0eb27cc9e97427385c6"
+
+  create_table "salor_cart_charge_amount_notifications", :force => true do |t|
+    t.integer  "latest_charge_amount_cents"
+    t.string   "latest_charge_amount_currency"
+    t.integer  "total_charge_amount_cents"
+    t.string   "total_charge_amount_currency"
+    t.integer  "latest_charge_fee_total_cents"
+    t.string   "latest_charge_fee_total_currency"
+    t.integer  "latest_charge_fee_flat_cents"
+    t.string   "latest_charge_fee_flat_currency"
+    t.string   "latest_charge_fee_percentage"
+    t.datetime "timestamp"
+    t.integer  "order_id"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                       :null => false
+    t.datetime "updated_at",                       :null => false
+    t.string   "google_order_number"
+  end
+
+  create_table "salor_cart_images", :force => true do |t|
+    t.string   "name"
+    t.string   "imageable_type"
+    t.integer  "imageable_id"
+    t.string   "image_type"
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+    t.datetime "created_at",     :null => false
+    t.datetime "updated_at",     :null => false
+  end
+
+  create_table "salor_cart_items", :force => true do |t|
+    t.integer  "order_id"
+    t.string   "name"
+    t.integer  "quantity"
+    t.integer  "unit_price_cents",                              :default => 0,     :null => false
+    t.string   "unit_price_currency",                           :default => "USD", :null => false
+    t.string   "description"
+    t.string   "sku"
+    t.boolean  "digital_content"
+    t.string   "digital_content_key"
+    t.string   "digital_content_url"
+    t.string   "digital_content_description"
+    t.boolean  "subscription"
+    t.string   "subscription_period"
+    t.string   "subscription_type"
+    t.datetime "subscription_start_date"
+    t.integer  "subscription_maximum_charge_cents",             :default => 0,     :null => false
+    t.string   "subscription_maximum_charge_currency",          :default => "USD", :null => false
+    t.datetime "created_at",                                                       :null => false
+    t.datetime "updated_at",                                                       :null => false
+    t.integer  "product_id"
+    t.integer  "total_cents",                                   :default => 0,     :null => false
+    t.string   "total_currency",                                :default => "USD", :null => false
+    t.integer  "subscription_times"
+    t.datetime "payment_last_date"
+    t.datetime "subscription_recurrence_request_last_date"
+    t.integer  "subscription_recurrence_request_last_cents"
+    t.string   "subscription_recurrence_request_last_currency"
+    t.string   "subscription_subdomain"
+    t.boolean  "subscription_identifier_required"
+    t.string   "subscription_host"
+    t.boolean  "subscription_active"
+    t.boolean  "cancelled"
+    t.integer  "product_unit_price_cents"
+    t.integer  "product_unit_price_currency"
+    t.boolean  "subscription_cancelled"
+    t.datetime "cancelled_at"
+    t.datetime "subscription_cancelled_at"
+    t.string   "subscription_domain"
+    t.string   "subscription_virtualhost_filter"
+    t.string   "subscription_identifier"
+    t.string   "subscription_current_url_by_api"
+    t.string   "subscription_default_password"
+    t.text     "digital_content_explanation"
+    t.integer  "subscription_server_id"
+    t.boolean  "quantity_locked"
+  end
+
+  create_table "salor_cart_new_order_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "google_order_number"
+    t.integer  "order_total_cents",                                :default => 0,     :null => false
+    t.string   "order_total_currency",                             :default => "USD", :null => false
+    t.string   "fulfillment_order_state"
+    t.string   "financial_order_state"
+    t.string   "buyer_id"
+    t.integer  "order_adjustment_total_tax_cents",                 :default => 0,     :null => false
+    t.string   "order_adjustment_total_tax_currency",              :default => "USD", :null => false
+    t.boolean  "order_adjustment_merchant_calculation_successful"
+    t.integer  "order_adjustment_adjustment_total_cents",          :default => 0,     :null => false
+    t.string   "order_adjustment_adjustment_total_currency",       :default => "USD", :null => false
+    t.string   "merchant_order_number"
+    t.integer  "order_id"
+    t.datetime "created_at",                                                          :null => false
+    t.datetime "updated_at",                                                          :null => false
+    t.integer  "raw_google_notification_id"
+  end
+
+  create_table "salor_cart_option_items", :force => true do |t|
+    t.integer  "option_id"
+    t.integer  "unit_price_cents",            :default => 0,     :null => false
+    t.string   "unit_price_currency",         :default => "USD", :null => false
+    t.string   "name"
+    t.string   "description"
+    t.text     "digital_content_permissions"
+    t.integer  "product_id"
+    t.integer  "item_id"
+    t.datetime "created_at",                                     :null => false
+    t.datetime "updated_at",                                     :null => false
+    t.integer  "order_id"
+    t.integer  "total_cents",                 :default => 0,     :null => false
+    t.string   "total_currency",              :default => "USD", :null => false
+  end
+
+  create_table "salor_cart_option_translations", :force => true do |t|
+    t.integer  "salor_cart_option_id"
+    t.string   "locale"
+    t.string   "name"
+    t.string   "description"
+    t.text     "description_long"
+    t.datetime "created_at",           :null => false
+    t.datetime "updated_at",           :null => false
+  end
+
+  add_index "salor_cart_option_translations", ["locale"], :name => "index_salor_cart_option_translations_on_locale"
+  add_index "salor_cart_option_translations", ["salor_cart_option_id"], :name => "index_salor_cart_option_translations_on_salor_cart_option_id"
+
+  create_table "salor_cart_options", :force => true do |t|
+    t.string   "name"
+    t.string   "description"
+    t.integer  "product_id"
+    t.text     "digital_content_permissions"
+    t.integer  "unit_price_cents",                    :default => 0,     :null => false
+    t.string   "unit_price_currency",                 :default => "USD", :null => false
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
+    t.text     "subscription_api_params_subscribe"
+    t.text     "subscription_api_params_unsubscribe"
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+    t.text     "description_long"
+  end
+
+  create_table "salor_cart_order_state_change_notifications", :force => true do |t|
+    t.datetime "timestamp"
+    t.string   "serial_number"
+    t.string   "google_order_number"
+    t.string   "new_financial_order_state"
+    t.string   "previous_financial_order_state"
+    t.string   "new_fulfillment_order_state"
+    t.string   "previous_fulfillment_order_state"
+    t.string   "reason"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                       :null => false
+    t.datetime "updated_at",                       :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_orders", :force => true do |t|
+    t.string   "google_order_number"
+    t.string   "merchant_order_number"
+    t.datetime "created_at",                                         :null => false
+    t.datetime "updated_at",                                         :null => false
+    t.integer  "buyer_id"
+    t.integer  "total_cents",                     :default => 0,     :null => false
+    t.string   "total_currency",                  :default => "USD", :null => false
+    t.boolean  "completed"
+    t.boolean  "payment_provider_redirected"
+    t.string   "payment_provider"
+    t.string   "payment_provider_redirect_url"
+    t.string   "google_analytics_data"
+    t.boolean  "contains_subscription_item"
+    t.boolean  "cancelled"
+    t.boolean  "charged"
+    t.boolean  "shipped"
+    t.datetime "last_charged_at"
+    t.integer  "last_charged_amount_cents",       :default => 0
+    t.string   "last_charged_amount_currency"
+    t.boolean  "charge_and_ship_sent"
+    t.string   "financial_state"
+    t.string   "fulfillment_state"
+    t.integer  "last_authorized_amount_cents",    :default => 0
+    t.string   "last_authorized_amount_currency"
+    t.boolean  "refunded"
+    t.datetime "last_refunded_at"
+    t.datetime "cancelled_at"
+    t.integer  "refund_amount_cents",             :default => 0,     :null => false
+    t.string   "refund_amount_currency",          :default => "USD", :null => false
+    t.datetime "shipped_at"
+  end
+
+  create_table "salor_cart_product_translations", :force => true do |t|
+    t.integer  "salor_cart_product_id"
+    t.string   "locale"
+    t.string   "name"
+    t.string   "description"
+    t.text     "digital_content_explanation"
+    t.text     "description_long"
+    t.datetime "created_at",                  :null => false
+    t.datetime "updated_at",                  :null => false
+  end
+
+  add_index "salor_cart_product_translations", ["locale"], :name => "index_salor_cart_product_translations_on_locale"
+  add_index "salor_cart_product_translations", ["salor_cart_product_id"], :name => "index_salor_cart_product_translations_on_salor_cart_product_id"
+
+  create_table "salor_cart_products", :force => true do |t|
+    t.string   "name"
+    t.text     "digital_content_permissions"
+    t.integer  "unit_price_cents",                    :default => 0,     :null => false
+    t.string   "unit_price_currency",                 :default => "USD", :null => false
+    t.integer  "category_id"
+    t.string   "description"
+    t.string   "sku"
+    t.datetime "created_at",                                             :null => false
+    t.datetime "updated_at",                                             :null => false
+    t.boolean  "digital_content"
+    t.boolean  "subscription"
+    t.string   "subscription_type"
+    t.string   "subscription_period"
+    t.boolean  "subscription_identifier_required"
+    t.datetime "subscription_start_date"
+    t.integer  "subscription_times"
+    t.text     "subscription_api_params_subscribe"
+    t.text     "subscription_api_params_unsubscribe"
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+    t.string   "subscription_resource_example"
+    t.string   "subscription_default_password"
+    t.text     "digital_content_explanation"
+    t.text     "subscription_identifier_description"
+    t.text     "description_long"
+    t.string   "combination_product_skus"
+  end
+
+  create_table "salor_cart_raw_google_notifications", :force => true do |t|
+    t.string   "klass"
+    t.text     "raw_xml",             :limit => 16777215
+    t.datetime "created_at",                              :null => false
+    t.datetime "updated_at",                              :null => false
+    t.string   "google_order_number"
+    t.integer  "order_id"
+    t.boolean  "incoming"
+  end
+
+  create_table "salor_cart_refund_amount_notifications", :force => true do |t|
+    t.string   "google_order_number"
+    t.integer  "order_id"
+    t.integer  "raw_google_notification_id"
+    t.integer  "latest_refund_amount_cents",        :default => 0,     :null => false
+    t.string   "latest_refund_amount_currency",     :default => "USD", :null => false
+    t.integer  "total_refund_amount_cents",         :default => 0,     :null => false
+    t.string   "total_refund_amount_currency",      :default => "USD", :null => false
+    t.integer  "latest_fee_refund_amount_cents",    :default => 0,     :null => false
+    t.string   "latest_fee_refund_amount_currency", :default => "USD", :null => false
+    t.datetime "timestamp"
+    t.datetime "created_at",                                           :null => false
+    t.datetime "updated_at",                                           :null => false
+  end
+
+  create_table "salor_cart_risk_information_notifications", :force => true do |t|
+    t.string   "serial_number"
+    t.datetime "timestamp"
+    t.string   "partial_card_number"
+    t.string   "ip_address"
+    t.string   "google_order_number"
+    t.boolean  "eligible_for_protection"
+    t.string   "cvn_response"
+    t.integer  "buyer_account_age"
+    t.string   "avs_response"
+    t.integer  "raw_google_notification_id"
+    t.datetime "created_at",                 :null => false
+    t.datetime "updated_at",                 :null => false
+    t.integer  "order_id"
+  end
+
+  create_table "salor_cart_subscription_servers", :force => true do |t|
+    t.integer  "product_id"
+    t.integer  "accounts_max",         :default => 10
+    t.integer  "accounts_left",        :default => 10
+    t.integer  "accounts_used",        :default => 0
+    t.string   "domain"
+    t.string   "subdomain"
+    t.string   "virtualhost_filter"
+    t.string   "subscription_api_url"
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+    t.string   "name"
+    t.text     "description"
+    t.datetime "created_at",                           :null => false
+    t.datetime "updated_at",                           :null => false
+  end
+
+  create_table "salor_cart_tracking_infos", :force => true do |t|
+    t.integer  "order_id"
+    t.integer  "item_id"
+    t.string   "carrier_name"
+    t.integer  "carrier_id"
+    t.string   "tracking_number"
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.boolean  "hidden"
+    t.integer  "hidden_by"
+    t.datetime "hidden_at"
+  end
+
+  create_table "salor_cart_users", :force => true do |t|
+    t.string   "technician_email"
+    t.string   "password"
+    t.string   "password_encrypted"
+    t.string   "password_salt"
+    t.integer  "role",               :default => 10
+    t.datetime "created_at",                         :null => false
+    t.datetime "updated_at",                         :null => false
+    t.string   "id_hash"
   end
 
   create_table "salor_configurations", :force => true do |t|
