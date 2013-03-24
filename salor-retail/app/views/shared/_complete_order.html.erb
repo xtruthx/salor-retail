@@ -43,7 +43,7 @@ function add_payment_method() {
   var opts = payment_method_options();
   var sel = $('<select name="payment_methods[][internal_type]" id="' + "payment_type_" + numMethods + '" class="payment-method">'+payment_method_options()+'</select>');
   sel.on('change', function(){
-    ajax_log({button:'select_payment_method', button_id:sel.attr('id'), value:sel.val()});
+    ajax_log({button:'select_payment_method', button_id:sel.attr('id'), value:sel.val()}, order_id:Order.id);
   });
   //MF var sel = $('<div class="select-widget-button payment-method" internal_type="' + payment_internal_types[numMethods] + '" id="' + "payment_type_" + numMethods + '">' + payment_external_types[numMethods] + '</div>');
 
@@ -72,7 +72,7 @@ function add_payment_method() {
     focusInput(amount);
     amount.select();
   },100);
-  ajax_log({button:'add_payment_method'});
+  ajax_log({button:'add_payment_method', order_id:Order.id});
 }
 
 function validatePaymentMethod(element) {
@@ -235,7 +235,7 @@ function show_denominations() {
 			            var val = toFloat($(this).attr('amount'));
 			            $("#payment_amount_0").val( val );
 			            display_change();
-			            ajax_log({button:'pieces-button', value:val});
+			            ajax_log({button:'pieces-button', value:val, order_id:Order.id});
 			} );
 			$('body').append(p);
 		}
