@@ -63,11 +63,11 @@ function add_payment_method() {
       $("." + cls).select();
     },
     accepted: function () {
-      display_change();
+      display_change('keyboard '+sel.val());
     }
   });
   
-  display_change();
+  display_change('function add_payment_method');
   setTimeout(function () {
     focusInput(amount);
     amount.select();
@@ -131,7 +131,7 @@ function validatePaymentMethod(element) {
     
     $(pay_input).val(cardTotal);
     $(pay_input).addClass('bycard-amount');
-    display_change();
+    display_change('function validatePaymentMethod');
   } else {
     $(pay_input).val(cardTotal);
   }
@@ -213,7 +213,7 @@ function complete_order_show() {
   add_payment_method();
   $("#payment_amount_0").val( complete_total );
   $("#payment_amount_0").select();
-  display_change();
+  display_change('function complete_order_show');
   show_denominations();
   $("#keyboard_input").attr("disabled", true);
   allow_payment_amount = true;
@@ -234,7 +234,7 @@ function show_denominations() {
 			p.mousedown(function () {
 			            var val = toFloat($(this).attr('amount'));
 			            $("#payment_amount_0").val( val );
-			            display_change();
+			            display_change('pieces-button ' + val);
 			            ajax_log({log_action:'pieces-button', value:val, order_id:Order.id});
 			} );
 			$('body').append(p);
@@ -268,7 +268,7 @@ function addCashAmount() {
   var addAmount = toFloat($(this).val());
   var curAmount = toFloat($("#complete_in_cash").val());
   $("#complete_in_cash").val(curAmount + addAmount);
-  display_change();
+  display_change('function addCashAmount');
   focusInput($("#complete_in_cash"));
 }
 
@@ -381,7 +381,7 @@ function get_payment_total() {
   return paymentTotal;
 }
 
-function display_change() {
+function display_change(called_from) {
   if (sendingOrder) return;
   var paymentTotal = get_payment_total();
   //if (complete_total == 0) return;
@@ -408,7 +408,7 @@ function display_change() {
     allow_complete_order();
   }
   if(change > 0) { displayChangeToCustomer(); }
-  ajax_log({log_action:'display_change', order_id:Order.id, paymentTotal:paymentTotal, ototal:ototal, change:change});
+  ajax_log({log_action:'display_change', order_id:Order.id, paymentTotal:paymentTotal, ototal:ototal, change:change, called_from:called_from});
   return change;
 }
 
@@ -481,7 +481,7 @@ function serializePayments() {
 var orderCompleteDisplayed = false;
 $(document).ready(function() {
   $(".payment-amount").live('keyup', function(event){
-    display_change();
+    display_change('documentready');
   });
   $(".payment-method").live("change", function(){
     validatePaymentMethod($(this));
