@@ -660,6 +660,10 @@ class OrdersController < ApplicationController
     h = History.new
     h.url = "/orders/log"
     h.params = params
+    h.model_id = params[:order_id]
+    h.model_type = 'Order'
+    h.action_taken = params[:log_action]
+    h.changes_made = params[:called_from]
     h.save
     render :nothing => true
     # just to log into the production.log

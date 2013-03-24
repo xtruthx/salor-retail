@@ -72,7 +72,7 @@ function add_payment_method() {
     focusInput(amount);
     amount.select();
   },100);
-  ajax_log({log_action:'add_payment_method', order_id:Order.id});
+  ajax_log({log_action:'add_payment_method', order_id:Order.id, value:sel.val()});
 }
 
 function validatePaymentMethod(element) {
@@ -320,7 +320,9 @@ function complete_order_hide() {
   $('body').triggerHandler({type: "CompleteOrderHide"});
   if ( parseInt( Order.id ) % 20 == 0) { 
     window.location = '/orders/new'; 
-  } // trigger intensified garbage collection regularly
+  } // MF: trigger garbage collection by page refresh regularly
+  ajax_log({log_action:'complete_order_hide', order_id:Order.id});
+  
 }
 
 function get_highest(num) {
