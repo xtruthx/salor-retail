@@ -7,10 +7,10 @@
 # {VOCABULARY} orders_item item_price oi_price customer_payments payments_type payments_method paying_agent agent_has_paid agent_will_pay_later gift_card_applies coupon_percentage coupon_updated gift_cards_used item_price_update item_discount_percentage cash_register_used cash_register_inc include_register_codes employee_vendor
 class OrdersController < ApplicationController
 # {START}
-   before_filter :authify, :except => [:customer_display,:print, :print_receipt, :print_confirmed]
-   before_filter :initialize_instance_variables, :except => [:customer_display,:add_item_ajax, :print_receipt, :print_confirmed]
-   before_filter :check_role, :only => [:new_pos, :index, :show, :new, :edit, :create, :update, :destroy, :report_day], :except => [:print_receipt, :print_confirmed]
-   before_filter :crumble, :except => [:customer_display,:print, :print_receipt, :print_confirmed]
+   before_filter :authify, :except => [:customer_display,:print, :print_receipt, :print_confirmed, :log]
+   before_filter :initialize_instance_variables, :except => [:customer_display,:add_item_ajax, :print_receipt, :print_confirmed, :log]
+   before_filter :check_role, :only => [:new_pos, :index, :show, :new, :edit, :create, :update, :destroy, :report_day], :except => [:print_receipt, :print_confirmed, :log]
+   before_filter :crumble, :except => [:customer_display,:print, :print_receipt, :print_confirmed, :log]
    
    # TODO: Remove method offline since empty.
    def offline
@@ -654,6 +654,11 @@ class OrdersController < ApplicationController
       GlobalErrors.append_fatal("system.errors.no_role",@order,{})
       render :action => :update_pos_display and return
     end
+  end
+  
+  def log
+    render :nothing => true
+    # just to log into the production.log
   end
 
   private
