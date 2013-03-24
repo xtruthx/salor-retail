@@ -5,7 +5,6 @@ function updateDrawer(obj) {
 }
 
 function ajax_log(data) {
-  console.log(data);
   $.ajax({
     url:'/orders/log',
     type:'post',

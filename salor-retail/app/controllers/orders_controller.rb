@@ -657,6 +657,10 @@ class OrdersController < ApplicationController
   end
   
   def log
+    h = History.new
+    h.url = "/orders/log"
+    h.params = params
+    h.save
     render :nothing => true
     # just to log into the production.log
   end
