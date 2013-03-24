@@ -601,9 +601,9 @@ class Order < ActiveRecord::Base
       dt.amount *= -1
     end
     if dt.save then
-      if type == :payout then
+      if dt.payout then
         $User.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount - dt.amount)
-      elsif type == :drop then
+      elsif dt.drop then
         $User.get_drawer.update_attribute(:amount,GlobalData.salor_user.get_drawer.amount + dt.amount)
       end
       $User.reload
