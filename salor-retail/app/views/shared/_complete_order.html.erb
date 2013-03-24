@@ -373,9 +373,9 @@ function get_payment_total() {
   var paymentTotal = 0;
   $(".payment-amount:visible").each(
       function () {
-          if ($(this).attr("id")) {
+          //if ($(this).attr("id")) {
             paymentTotal += toFloat($(this).val());
-          }
+          //}
       }
   );
   return paymentTotal;
