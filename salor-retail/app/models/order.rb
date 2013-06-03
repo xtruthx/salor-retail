@@ -603,6 +603,7 @@ class Order < ActiveRecord::Base
       dt.drop = false
       dt.amount *= -1
     end
+    
     sql = %Q[
       INSERT INTO `drawer_transactions` 
         (`drawer_id`, `amount`, `drop`, `payout`, `drawer_amount`, `order_id`, `created_at`,`tag`)
