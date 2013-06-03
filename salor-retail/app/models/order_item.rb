@@ -713,6 +713,7 @@ class OrderItem < ActiveRecord::Base
         end
       end
     # end Check Parts and update quantities
+    ActiveRecord::Base.logger.info "[OrderItem]: set_sold complete"
   end
   def update_quantity_sold
     return if self.order.is_proforma == true
@@ -723,6 +724,7 @@ class OrderItem < ActiveRecord::Base
     if the_item.location then
       the_item.location.update_attribute(:quantity_sold,the_item.location.quantity_sold + self.quantity)
     end
+    ActiveRecord::Base.logger.info "[OrderItem]: update_quantity_sold complete"
   end
   def update_cash_made
     return if self.order.is_proforma == true
@@ -735,6 +737,7 @@ class OrderItem < ActiveRecord::Base
       the_item.location ||= 0.0
       the_item.location.update_attribute(:cash_made, the_item.location.cash_made + self.total)
     end
+    ActiveRecord::Base.logger.info "[OrderItem]: update_cash_made complete"
   end
   def recover_item
     i = Item.find_by_sku(self.sku)

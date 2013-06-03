@@ -363,6 +363,7 @@ class OrdersController < ApplicationController
     render :nothing => true
   end
   def complete_order_ajax
+    logger.info "[OrdersController]: Beginning complete_order_ajax"
     @order = initialize_order
     @old_order = @order
     # Here we check to see if there are any items on the order,
@@ -372,7 +373,7 @@ class OrdersController < ApplicationController
     # in javascript if an order is completable or not.
     
     if not @order.order_items.visible.any? then
-      
+      logger.info "[OrdersController]: no visible order items"
       render :js => "complete_order_hide(); " and return
     end
     
@@ -410,25 +411,34 @@ class OrdersController < ApplicationController
       # Now we check the payment_methods_total to make sure that it matches
       # what we think the order.total should be
       @order.reload
+      logger.info "[OrdersController]: order reloaded"
       
       if payment_methods_total.round(2) < @order.total.round(2) and @order.is_proforma == false then
         GlobalErrors.append_fatal("system.errors.sanity_check")
         # update_pos_display should update the interface to show
         # the correct total, this was the bug found by CigarMan
+        logger.info "[OrdersController]: Sanity Check 2 failed"
         render :action => :update_pos_display and return
       else
         payment_methods_array.each {|pm| pm.save} # otherwise, we save them
+        logger.info "[OrdersController]: All payment methods are now saved"
       end
       if @order.is_proforma == true then
+        logger.info "[OrdersController]: Order is_proforma"
         @order.complete
+        logger.info "[OrdersController]: rendering print for proforma invoice"
         render :js => " window.location = '/orders/#{@order.id}/print'; " and return
       end
       params[:print].nil? ? print = 'true' : print = params[:print].to_s
       # Receipt printing moved into Order.rb, line 497
+      
       @order.complete
+      logger.info "[OrdersController]: Order complete is...well...complete :)"
       atomize(ISDIR, 'cash_drop')
+      logger.info "[OrdersController]: atomized"
       GlobalData.salor_user.meta.order_id = nil
       @order = GlobalData.salor_user.get_new_order
+      logger.info "[OrdersController]: new order is: " + @order.inspect
     end
   end
   def new_order_ajax
