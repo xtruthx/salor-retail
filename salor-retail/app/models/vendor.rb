@@ -205,7 +205,7 @@ class Vendor < ActiveRecord::Base
   
   def self.reset_for_tests
     t = Time.now - 24.hours
-    Drawer.update_all :amount => 0
+    Drawer.update_all :amount_cents => 0
     Order.where(:created_at => t...(Time.now)).delete_all
     OrderItem.where(:created_at => t...(Time.now)).delete_all
     DrawerTransaction.where(:created_at => t...(Time.now)).delete_all
@@ -214,7 +214,7 @@ class Vendor < ActiveRecord::Base
     Category.update_all :quantity_sold => 0
     Location.update_all :cash_made => 0
     Location.update_all :quantity_sold => 0
-    SalorConfiguration.update_all :calculate_tax => false
+   # SalorConfiguration.update_all :calculate_tax => false #Constant missing initalize
     CashRegister.update_all :require_password => false
   end
   
